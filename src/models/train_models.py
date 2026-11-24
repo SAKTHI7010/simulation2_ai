@@ -35,7 +35,11 @@ from src.physics.hpgr_equations import audit_physics_consistency
 from src.preprocessing import compute_feature_bounds, export_validated_dataset, get_target_modeling_frame
 
 
-def build_model_pipeline(model_key: str, random_state: int = 42) -> Pipeline:
+def build_model_pipeline(
+    model_key: str,
+    random_state: int = 42,
+    gpr_restarts: int = 5,
+) -> Pipeline:
     """Create a scikit-learn Pipeline with leak-free preprocessing inside CV."""
     if model_key == "linear_regression":
         return Pipeline(
@@ -75,13 +79,60 @@ def build_model_pipeline(model_key: str, random_state: int = 42) -> Pipeline:
                     GaussianProcessRegressor(
                         kernel=kernel,
                         normalize_y=True,
-                        n_restarts_optimizer=5,
+                        n_restarts_optimizer=gpr_restarts,
                         random_state=random_state,
                     ),
                 ),
             ]
         )
     raise ValueError(f"Unsupported model_key: {model_key}")
+
+
+def refit_final_pipelines_fast(
+    metadata: Dict[str, Any] | None = None,
+    workbook_path: Path | None = None,
+    models_dir: Path | None = None,
+) -> Dict[str, Dict[str, Any]]:
+    """Quickly fit the 15 final target pipelines without running 90-fold LOOCV.
+
+    Used automatically on cloud deployments when scikit-learn versions differ from
+    the saved joblib pickles while preserving exact precomputed LOOCV metrics in metadata.json.
+    """
+    config = load_physics_config()
+    df_real = load_operating_data(workbook_path)
+    features = [f["name"] for f in config["selected_features"]]
+    target_names = list(metadata["targets"].keys()) if metadata else [t["name"] for t in config["targets"]]
+    model_keys = [m["key"] for m in config["modeling"]["models"]]
+    random_state = int(config.get("modeling", {}).get("random_state", 42))
+    out_models = models_dir or (PROJECT_ROOT / "models")
+
+    pipelines: Dict[str, Dict[str, Any]] = {}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=ConvergenceWarning)
+        warnings.simplefilter("ignore", category=UserWarning)
+        for tgt in target_names:
+            X_df, y_series, _ = get_target_modeling_frame(df_real, features, tgt)
+            y_vals = y_series.values
+            pipelines[tgt] = {}
+            for m_key in model_keys:
+                pipe = build_model_pipeline(m_key, random_state=random_state, gpr_restarts=2)
+                pipe.fit(X_df, y_vals)
+                pipelines[tgt][m_key] = pipe
+
+    # Best-effort persistence on writable filesystems (non-fatal on read-only mounts)
+    try:
+        out_models.mkdir(parents=True, exist_ok=True)
+        for tgt, m_map in pipelines.items():
+            for m_key, pipe in m_map.items():
+                joblib.dump(pipe, out_models / f"{tgt}__{m_key}.joblib")
+        if metadata is not None:
+            metadata["sklearn_version"] = sklearn.__version__
+            with (out_models / "metadata.json").open("w", encoding="utf-8") as fh:
+                json.dump(metadata, fh, indent=2)
+    except OSError:
+        pass
+
+    return pipelines
 
 
 def train_and_save_all(

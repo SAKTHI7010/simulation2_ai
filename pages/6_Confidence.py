@@ -24,6 +24,7 @@ from src.visualization.ui_theme import (
     render_confidence_banner,
     render_data_provenance_sidebar,
     render_hero_banner,
+    stretch_kwargs,
 )
 
 apply_custom_theme()
@@ -70,7 +71,7 @@ for idx, fdef in enumerate(feature_defs):
 run_conf_btn = st.button(
     "🛡️ Run Confidence & Uncertainty Check",
     type="primary",
-    use_container_width=True,
+    **stretch_kwargs(),
     key="run_confidence_btn",
 )
 
@@ -104,7 +105,7 @@ else:
 
     col_cov, col_tbl = st.columns([1.25, 1.0])
     with col_cov:
-        st.plotly_chart(plot_training_range_bullets(range_res), use_container_width=True)
+        st.plotly_chart(plot_training_range_bullets(range_res), **stretch_kwargs())
     with col_tbl:
         st.markdown("#### Feature Range Audit Table (All 21 Real Pilot Tests)")
         tbl_rows = []
@@ -118,7 +119,7 @@ else:
                     "Status": item["status"],
                 }
             )
-        st.dataframe(pd.DataFrame(tbl_rows), use_container_width=True, height=280)
+        st.dataframe(pd.DataFrame(tbl_rows), **stretch_kwargs(), height=280)
 
     with st.expander("Check Per-Target Feature Bounds (n=21 vs. n=16 P80 Subset)", expanded=False):
         tgt_rows = []
@@ -133,7 +134,7 @@ else:
                         "Max": round(b["max"], 3),
                     }
                 )
-        st.dataframe(pd.DataFrame(tgt_rows), use_container_width=True, height=300)
+        st.dataframe(pd.DataFrame(tgt_rows), **stretch_kwargs(), height=300)
 
     st.markdown("---")
     st.markdown("### 📉 How GPR Predictive Uncertainty (σ) Behaves Outside Training Data")
@@ -181,7 +182,7 @@ else:
             min_obs=float(b_u["min"]),
             max_obs=float(b_u["max"]),
         ),
-        use_container_width=True,
+        **stretch_kwargs(),
     )
 
 st.markdown("---")

@@ -26,6 +26,7 @@ from src.visualization.ui_theme import (
     apply_custom_theme,
     render_data_provenance_sidebar,
     render_hero_banner,
+    stretch_kwargs,
     render_kpi_card,
 )
 
@@ -89,7 +90,7 @@ with tab_table:
         horizontal=True,
         key="mc_metric_radio",
     )
-    st.plotly_chart(plot_model_metrics_comparison(eval_df, metric=metric_choice), use_container_width=True)
+    st.plotly_chart(plot_model_metrics_comparison(eval_df, metric=metric_choice), **stretch_kwargs())
 
     st.markdown("#### Complete Per-Target Cross-Validation Table")
     display_cols = [
@@ -104,7 +105,7 @@ with tab_table:
         "max_abs_error",
         "is_best_loocv",
     ]
-    st.dataframe(eval_df[display_cols], use_container_width=True, height=420)
+    st.dataframe(eval_df[display_cols], **stretch_kwargs(), height=420)
 
 with tab_parity:
     tgt_options = list(metadata["targets"].keys())
@@ -125,7 +126,7 @@ with tab_parity:
         with col_box:
             st.plotly_chart(
                 plot_actual_vs_predicted(loocv_df, sel_tgt, tinfo["label"], tinfo["unit"], m_key, m_lbl),
-                use_container_width=True,
+                **stretch_kwargs(),
             )
 
     res_model = st.selectbox(
@@ -136,7 +137,7 @@ with tab_parity:
     )
     st.plotly_chart(
         plot_residuals(loocv_df, sel_tgt, tinfo["label"], tinfo["unit"], res_model, tinfo["models"][res_model]["label"]),
-        use_container_width=True,
+        **stretch_kwargs(),
     )
 
 with tab_effects:
@@ -171,7 +172,7 @@ with tab_effects:
             paper_bgcolor="#111A2E",
             font=dict(color="#E2E8F0"),
         )
-        st.plotly_chart(fig_lr, use_container_width=True)
+        st.plotly_chart(fig_lr, **stretch_kwargs())
 
     with e_c2:
         rf_imps = tinfo_e["models"]["random_forest"].get("feature_importances", {})
@@ -196,7 +197,7 @@ with tab_effects:
             paper_bgcolor="#111A2E",
             font=dict(color="#E2E8F0"),
         )
-        st.plotly_chart(fig_rf, use_container_width=True)
+        st.plotly_chart(fig_rf, **stretch_kwargs())
 
     st.info(
         f"**Fitted GPR Kernel (`{tinfo_e['label']}`):** `{tinfo_e['models']['gpr'].get('fitted_kernel', '')}`\n\n"

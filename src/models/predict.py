@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import threading
+import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
@@ -12,7 +14,7 @@ import pandas as pd
 import sklearn
 
 from src.data_loader import PROJECT_ROOT, load_physics_config
-from src.models.train_models import train_and_save_all
+from src.models.train_models import refit_final_pipelines_fast, train_and_save_all
 from src.models.uncertainty import check_input_ranges, compute_gpr_prediction_with_uncertainty
 from src.physics.hpgr_equations import (
     compute_pressing_force_from_fsp,
@@ -24,61 +26,61 @@ from src.physics.hpgr_equations import (
 MODELS_DIR: Path = PROJECT_ROOT / "models"
 PROCESSED_DIR: Path = PROJECT_ROOT / "data" / "processed"
 _ARTIFACT_CACHE: Dict[str, Any] | None = None
+_ARTIFACT_LOCK = threading.Lock()
 
 
 def load_trained_artifacts(auto_train: bool = True, force_reload: bool = False) -> Dict[str, Any]:
-    """Load saved metadata and fitted model pipelines, retraining automatically if absent or incompatible."""
+    """Load saved metadata and fitted model pipelines, fast-refitting on version mismatch."""
     global _ARTIFACT_CACHE
     if _ARTIFACT_CACHE is not None and not force_reload:
         return _ARTIFACT_CACHE
 
-    meta_path = MODELS_DIR / "metadata.json"
-    if not meta_path.exists():
-        if not auto_train:
-            raise FileNotFoundError(f"Model metadata not found at {meta_path}")
-        train_and_save_all()
+    with _ARTIFACT_LOCK:
+        if _ARTIFACT_CACHE is not None and not force_reload:
+            return _ARTIFACT_CACHE
 
-    with meta_path.open("r", encoding="utf-8") as fh:
-        metadata = json.load(fh)
+        meta_path = MODELS_DIR / "metadata.json"
+        if not meta_path.exists():
+            if not auto_train:
+                raise FileNotFoundError(f"Model metadata not found at {meta_path}")
+            train_and_save_all()
 
-    if auto_train and metadata.get("sklearn_version") != sklearn.__version__:
-        train_and_save_all()
         with meta_path.open("r", encoding="utf-8") as fh:
             metadata = json.load(fh)
 
-    def _load_all_pipelines(meta: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-        loaded: Dict[str, Dict[str, Any]] = {}
-        for tgt, tinfo in meta["targets"].items():
-            loaded[tgt] = {}
-            for m_key, minfo in tinfo["models"].items():
-                art_path = MODELS_DIR / minfo["artifact"]
-                if not art_path.exists():
-                    raise FileNotFoundError(f"Missing model artifact: {art_path}")
-                loaded[tgt][m_key] = joblib.load(art_path)
-        return loaded
+        def _load_all_pipelines(meta: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+            loaded: Dict[str, Dict[str, Any]] = {}
+            for tgt, tinfo in meta["targets"].items():
+                loaded[tgt] = {}
+                for m_key, minfo in tinfo["models"].items():
+                    art_path = MODELS_DIR / minfo["artifact"]
+                    if not art_path.exists():
+                        raise FileNotFoundError(f"Missing model artifact: {art_path}")
+                    loaded[tgt][m_key] = joblib.load(art_path)
+            return loaded
 
-    try:
-        pipelines = _load_all_pipelines(metadata)
-    except Exception:
-        if not auto_train:
-            raise
-        train_and_save_all()
-        with meta_path.open("r", encoding="utf-8") as fh:
-            metadata = json.load(fh)
-        pipelines = _load_all_pipelines(metadata)
+        if auto_train and metadata.get("sklearn_version") != sklearn.__version__:
+            pipelines = refit_final_pipelines_fast(metadata=metadata, models_dir=MODELS_DIR)
+        else:
+            try:
+                pipelines = _load_all_pipelines(metadata)
+            except Exception:
+                if not auto_train:
+                    raise
+                pipelines = refit_final_pipelines_fast(metadata=metadata, models_dir=MODELS_DIR)
 
-    eval_path = PROCESSED_DIR / "model_evaluation_report.csv"
-    loocv_path = PROCESSED_DIR / "loocv_predictions.csv"
-    eval_df = pd.read_csv(eval_path) if eval_path.exists() else pd.DataFrame()
-    loocv_df = pd.read_csv(loocv_path) if loocv_path.exists() else pd.DataFrame()
+        eval_path = PROCESSED_DIR / "model_evaluation_report.csv"
+        loocv_path = PROCESSED_DIR / "loocv_predictions.csv"
+        eval_df = pd.read_csv(eval_path) if eval_path.exists() else pd.DataFrame()
+        loocv_df = pd.read_csv(loocv_path) if loocv_path.exists() else pd.DataFrame()
 
-    _ARTIFACT_CACHE = {
-        "metadata": metadata,
-        "pipelines": pipelines,
-        "eval_df": eval_df,
-        "loocv_df": loocv_df,
-    }
-    return _ARTIFACT_CACHE
+        _ARTIFACT_CACHE = {
+            "metadata": metadata,
+            "pipelines": pipelines,
+            "eval_df": eval_df,
+            "loocv_df": loocv_df,
+        }
+        return _ARTIFACT_CACHE
 
 
 def _feature_label_unit_maps(metadata: Dict[str, Any]):
@@ -112,41 +114,43 @@ def predict_all_targets(
     )
 
     predictions: Dict[str, Dict[str, Any]] = {}
-    for tgt, tinfo in metadata["targets"].items():
-        selected_pipe = pipelines[tgt][model_key]
-        pred_val = float(selected_pipe.predict(X_df)[0])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        for tgt, tinfo in metadata["targets"].items():
+            selected_pipe = pipelines[tgt][model_key]
+            pred_val = float(selected_pipe.predict(X_df)[0])
 
-        gpr_pipe = pipelines[tgt]["gpr"]
-        gpr_mean, gpr_std, ci_low, ci_high = compute_gpr_prediction_with_uncertainty(gpr_pipe, X_df)
+            gpr_pipe = pipelines[tgt]["gpr"]
+            gpr_mean, gpr_std, ci_low, ci_high = compute_gpr_prediction_with_uncertainty(gpr_pipe, X_df)
 
-        tgt_range = check_input_ranges(
-            input_dict,
-            tinfo["feature_bounds"],
-            boundary_margin_pct=margin,
-            feature_labels=labels,
-            feature_units=units,
-        )
+            tgt_range = check_input_ranges(
+                input_dict,
+                tinfo["feature_bounds"],
+                boundary_margin_pct=margin,
+                feature_labels=labels,
+                feature_units=units,
+            )
 
-        # Also get all 3 models for comparison chart
-        all_models: Dict[str, float] = {}
-        for mk, pipe in pipelines[tgt].items():
-            all_models[mk] = round(float(pipe.predict(X_df)[0]), 4)
+            # Also get all 3 models for comparison chart
+            all_models: Dict[str, float] = {}
+            for mk, pipe in pipelines[tgt].items():
+                all_models[mk] = round(float(pipe.predict(X_df)[0]), 4)
 
-        predictions[tgt] = {
-            "target": tgt,
-            "label": tinfo["label"],
-            "unit": tinfo["unit"],
-            "n_samples": tinfo["n_samples"],
-            "model_key": model_key,
-            "model_label": tinfo["models"][model_key]["label"],
-            "prediction": round(pred_val, 3),
-            "gpr_mean": round(float(gpr_mean[0]), 3),
-            "gpr_std": round(float(gpr_std[0]), 3),
-            "ci95_low": round(float(ci_low[0]), 3),
-            "ci95_high": round(float(ci_high[0]), 3),
-            "range_check": tgt_range,
-            "all_models": all_models,
-        }
+            predictions[tgt] = {
+                "target": tgt,
+                "label": tinfo["label"],
+                "unit": tinfo["unit"],
+                "n_samples": tinfo["n_samples"],
+                "model_key": model_key,
+                "model_label": tinfo["models"][model_key]["label"],
+                "prediction": round(pred_val, 3),
+                "gpr_mean": round(float(gpr_mean[0]), 3),
+                "gpr_std": round(float(gpr_std[0]), 3),
+                "ci95_low": round(float(ci_low[0]), 3),
+                "ci95_high": round(float(ci_high[0]), 3),
+                "range_check": tgt_range,
+                "all_models": all_models,
+            }
 
     # Physics diagnostics at current operating inputs
     geom = config.get("machine_geometry", {})
@@ -242,8 +246,10 @@ def generate_sensitivity_curve(
     sel_pipe = bundle["pipelines"][target][model_key]
     gpr_pipe = bundle["pipelines"][target]["gpr"]
 
-    y_pred = sel_pipe.predict(X_sweep)
-    gpr_mean, gpr_std, ci_low, ci_high = compute_gpr_prediction_with_uncertainty(gpr_pipe, X_sweep)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        y_pred = sel_pipe.predict(X_sweep)
+        gpr_mean, gpr_std, ci_low, ci_high = compute_gpr_prediction_with_uncertainty(gpr_pipe, X_sweep)
 
     return pd.DataFrame(
         {

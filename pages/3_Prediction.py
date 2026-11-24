@@ -25,6 +25,7 @@ from src.visualization.ui_theme import (
     render_confidence_banner,
     render_data_provenance_sidebar,
     render_hero_banner,
+    stretch_kwargs,
     render_kpi_card,
 )
 
@@ -99,7 +100,7 @@ preset_options = {
 p_cols = st.columns(len(preset_options))
 for idx, (pname, pvals) in enumerate(preset_options.items()):
     with p_cols[idx]:
-        if st.button(pname, use_container_width=True, key=f"preset_btn_{idx}"):
+        if st.button(pname, **stretch_kwargs(), key=f"preset_btn_{idx}"):
             for fk, fv in pvals.items():
                 st.session_state["pred_inputs"][fk] = float(fv)
                 st.session_state[f"slider_{fk}"] = float(fv)
@@ -143,7 +144,7 @@ with left_col:
     run_clicked = st.button(
         "🚀 Run Prediction",
         type="primary",
-        use_container_width=True,
+        **stretch_kwargs(),
         key="run_prediction_btn",
     )
 
@@ -259,10 +260,10 @@ if "pred_result" in st.session_state:
             format_func=lambda k: f"{preds[k]['label']} ({preds[k]['unit']})",
             key="pred_compare_tgt",
         )
-        st.plotly_chart(plot_prediction_model_compare(preds[chosen_tgt]), use_container_width=True)
+        st.plotly_chart(plot_prediction_model_compare(preds[chosen_tgt]), **stretch_kwargs())
     with comp_c2:
         st.markdown("#### Top 3 Closest Real Pilot Tests (Range-Normalized Euclidean Distance)")
         nearest_df = find_nearest_real_tests(snap_inputs, df_real, features, global_bounds, top_k=3)
-        st.dataframe(nearest_df, use_container_width=True, height=280)
+        st.dataframe(nearest_df, **stretch_kwargs(), height=280)
 
 render_bwi_unavailable_card()

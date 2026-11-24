@@ -60,13 +60,23 @@ class WorkbookLoadError(RuntimeError):
     """Raised when the source workbook is missing or unreadable."""
 
 
+_CONFIG_CACHE: Dict[str, Any] | None = None
+_REAL_OPERATING_CACHE: pd.DataFrame | None = None
+
+
 def load_physics_config(config_path: Union[str, Path, None] = None) -> Dict[str, Any]:
     """Load the physics and modeling assumptions YAML file."""
+    global _CONFIG_CACHE
+    if config_path is None and _CONFIG_CACHE is not None:
+        return _CONFIG_CACHE
     path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
     if not path.exists():
         raise FileNotFoundError(f"Configuration file not found: {path}")
     with path.open("r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
+        cfg = yaml.safe_load(fh)
+    if config_path is None:
+        _CONFIG_CACHE = cfg
+    return cfg
 
 
 def _open_excel_source(source: Union[str, Path, bytes, io.BytesIO, Any, None]) -> pd.ExcelFile:
@@ -102,21 +112,19 @@ def _open_excel_source(source: Union[str, Path, bytes, io.BytesIO, Any, None]) -
 def load_workbook_sheets(source: Union[str, Path, bytes, io.BytesIO, Any, None] = None) -> Dict[str, pd.DataFrame]:
     """Load all sheets from the HPGR Excel workbook without altering source values."""
     try:
-        xl = _open_excel_source(source)
+        with _open_excel_source(source) as xl:
+            if "Operating_Data" not in xl.sheet_names:
+                raise WorkbookLoadError(
+                    f"Required sheet 'Operating_Data' is missing. Found sheets: {xl.sheet_names}"
+                )
+            sheets: Dict[str, pd.DataFrame] = {}
+            for sheet_name in xl.sheet_names:
+                sheets[sheet_name] = pd.read_excel(xl, sheet_name=sheet_name)
+            return sheets
     except WorkbookLoadError:
         raise
     except Exception as exc:
         raise WorkbookLoadError(f"Unable to read Excel workbook: {exc}") from exc
-
-    if "Operating_Data" not in xl.sheet_names:
-        raise WorkbookLoadError(
-            f"Required sheet 'Operating_Data' is missing. Found sheets: {xl.sheet_names}"
-        )
-
-    sheets: Dict[str, pd.DataFrame] = {}
-    for sheet_name in xl.sheet_names:
-        sheets[sheet_name] = xl.parse(sheet_name)
-    return sheets
 
 
 def load_operating_data(
@@ -124,6 +132,10 @@ def load_operating_data(
     include_description: bool = True,
 ) -> pd.DataFrame:
     """Load Operating_Data sheet, optionally merging Test_Description from Test_Key."""
+    global _REAL_OPERATING_CACHE
+    if source is None and include_description and _REAL_OPERATING_CACHE is not None:
+        return _REAL_OPERATING_CACHE.copy()
+
     sheets = load_workbook_sheets(source)
     op_df = sheets["Operating_Data"].copy()
 
@@ -134,6 +146,8 @@ def load_operating_data(
             op_df = op_df.merge(desc_map, on="Test_ID", how="left")
 
     op_df["data_source"] = "REAL"
+    if source is None and include_description:
+        _REAL_OPERATING_CACHE = op_df.copy()
     return op_df
 
 

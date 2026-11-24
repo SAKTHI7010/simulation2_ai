@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Any, Dict, List, Sequence, Tuple
 
 import numpy as np
@@ -103,10 +104,12 @@ def compute_gpr_prediction_with_uncertainty(
     X_df: pd.DataFrame,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Compute GPR predictive mean, std, and approximate 95% interval (mean +/- 1.96*std)."""
-    preprocessor = pipeline[:-1]
-    gpr_model = pipeline.named_steps["model"]
-    X_transformed = preprocessor.transform(X_df)
-    mean, std = gpr_model.predict(X_transformed, return_std=True)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        preprocessor = pipeline[:-1]
+        gpr_model = pipeline.named_steps["model"]
+        X_transformed = preprocessor.transform(X_df)
+        mean, std = gpr_model.predict(X_transformed, return_std=True)
     mean = np.asarray(mean, dtype=float)
     std = np.maximum(np.asarray(std, dtype=float), 0.0)
     ci95_low = mean - 1.96 * std

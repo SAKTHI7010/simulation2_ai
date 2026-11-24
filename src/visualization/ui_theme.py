@@ -27,6 +27,17 @@ GRADIENTS: Dict[str, str] = {
 }
 
 
+def stretch_kwargs() -> Dict[str, Any]:
+    """Return version-safe stretch sizing kwargs (width='stretch' on Streamlit >=1.50, else use_container_width=True)."""
+    try:
+        parts = tuple(int(p) for p in st.__version__.split(".")[:2])
+        if parts >= (1, 50):
+            return {"width": "stretch"}
+    except Exception:
+        pass
+    return {"use_container_width": True}
+
+
 def apply_custom_theme() -> None:
     """Inject vibrant dark-mode CSS styling compatible with Streamlit 1.35.0."""
     st.markdown(

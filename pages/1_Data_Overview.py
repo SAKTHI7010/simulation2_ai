@@ -35,6 +35,7 @@ from src.visualization.ui_theme import (
     render_bwi_unavailable_card,
     render_data_provenance_sidebar,
     render_hero_banner,
+    stretch_kwargs,
     render_kpi_card,
 )
 
@@ -117,7 +118,7 @@ with tab1:
     phases = sorted(df["Phase"].dropna().unique().tolist())
     sel_phases = st.multiselect("Filter by Experimental Phase", phases, default=phases, key="do_phase_filter")
     filtered_df = df[df["Phase"].isin(sel_phases)] if sel_phases else df
-    st.dataframe(filtered_df, use_container_width=True, height=420)
+    st.dataframe(filtered_df, **stretch_kwargs(), height=420)
 
     csv_bytes = filtered_df.to_csv(index=False).encode("utf-8")
     st.download_button(
@@ -129,12 +130,12 @@ with tab1:
     )
     if "Test_Key" in sheets:
         st.markdown("#### Test Key Reference")
-        st.dataframe(sheets["Test_Key"], use_container_width=True, height=280)
+        st.dataframe(sheets["Test_Key"], **stretch_kwargs(), height=280)
 
 with tab2:
     col_l, col_r = st.columns([1.2, 1.0])
     with col_l:
-        st.plotly_chart(plot_missing_values_bar(data_dict_df), use_container_width=True)
+        st.plotly_chart(plot_missing_values_bar(data_dict_df), **stretch_kwargs())
     with col_r:
         avail_rows = []
         for t_def in config["targets"]:
@@ -145,10 +146,10 @@ with tab2:
         avail_rows.append(
             {"Target": "Bond Work Index ΔBWi", "Usable Rows": 0, "Status": "Unavailable (Future Work)"}
         )
-        st.plotly_chart(plot_target_availability_bar(pd.DataFrame(avail_rows)), use_container_width=True)
+        st.plotly_chart(plot_target_availability_bar(pd.DataFrame(avail_rows)), **stretch_kwargs())
 
     st.markdown("#### Full Data Dictionary (Units, Missingness, Roles & Range)")
-    st.dataframe(data_dict_df, use_container_width=True, height=430)
+    st.dataframe(data_dict_df, **stretch_kwargs(), height=430)
     render_bwi_unavailable_card()
 
 with tab3:
@@ -156,7 +157,7 @@ with tab3:
         f"Auditing source workbook values against UBC thesis equations with `D = {geom['roll_diameter_m']} m` "
         f"and `L = {geom['roll_width_m']} m` (`D × L = {geom['roll_diameter_m'] * geom['roll_width_m']:.3f} m²`)."
     )
-    st.dataframe(physics_audit_df, use_container_width=True, height=420)
+    st.dataframe(physics_audit_df, **stretch_kwargs(), height=420)
     c_a, c_b, c_c = st.columns(3)
     with c_a:
         max_fsp_err = physics_audit_df["diff_Fsp"].abs().max()
@@ -172,14 +173,14 @@ with tab4:
     numeric_cols = get_suitable_numeric_columns(df, min_non_null=6, min_unique=2)
     unit_map = dict(zip(data_dict_df["column"], data_dict_df["unit"]))
     sel_col = st.selectbox("Select Numeric Column to Inspect", numeric_cols, index=numeric_cols.index("throughput_t_h") if "throughput_t_h" in numeric_cols else 0, key="do_dist_col")
-    st.plotly_chart(plot_feature_distribution(df, sel_col, unit_map.get(sel_col, "")), use_container_width=True)
+    st.plotly_chart(plot_feature_distribution(df, sel_col, unit_map.get(sel_col, "")), **stretch_kwargs())
 
     if "Size_Distribution_Raw" in sheets:
         with st.expander("Size_Distribution_Raw Reference Rows (53 extracted sieve rows)", expanded=False):
-            st.dataframe(sheets["Size_Distribution_Raw"], use_container_width=True, height=280)
+            st.dataframe(sheets["Size_Distribution_Raw"], **stretch_kwargs(), height=280)
     if "Read_Me" in sheets:
         with st.expander("Workbook Read_Me Notes", expanded=False):
-            st.dataframe(sheets["Read_Me"], use_container_width=True)
+            st.dataframe(sheets["Read_Me"], **stretch_kwargs())
 
 with tab5:
     policy_html = (
@@ -200,6 +201,6 @@ with tab5:
     if syn_path.exists():
         syn_df = pd.read_csv(syn_path)
         st.markdown(f"#### Synthetic Exploration Table (`data_source == 'SYNTHETIC'`, {len(syn_df)} rows)")
-        st.dataframe(syn_df, use_container_width=True, height=300)
+        st.dataframe(syn_df, **stretch_kwargs(), height=300)
     else:
         st.info("Synthetic exploration CSV has not been generated yet. Run `python -m src.models.train_models`.")

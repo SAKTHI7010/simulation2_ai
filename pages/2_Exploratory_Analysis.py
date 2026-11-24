@@ -27,6 +27,7 @@ from src.visualization.ui_theme import (
     apply_custom_theme,
     render_data_provenance_sidebar,
     render_hero_banner,
+    stretch_kwargs,
 )
 
 apply_custom_theme()
@@ -85,7 +86,7 @@ with tab_rel:
                 title="Pressing Force vs. Scale-up Product P80",
                 show_trendline=show_trend,
             ),
-            use_container_width=True,
+            **stretch_kwargs(),
         )
     with r1c2:
         st.plotly_chart(
@@ -98,7 +99,7 @@ with tab_rel:
                 title="Roll Speed vs. Press Throughput",
                 show_trendline=show_trend,
             ),
-            use_container_width=True,
+            **stretch_kwargs(),
         )
 
     r2c1, r2c2 = st.columns(2)
@@ -113,10 +114,10 @@ with tab_rel:
                 title="Feed Moisture vs. Net Specific Energy",
                 show_trendline=show_trend,
             ),
-            use_container_width=True,
+            **stretch_kwargs(),
         )
     with r2c2:
-        st.plotly_chart(plot_force_vs_p80_multi(df_view), use_container_width=True)
+        st.plotly_chart(plot_force_vs_p80_multi(df_view), **stretch_kwargs())
 
 with tab_custom:
     suitable_cols = get_suitable_numeric_columns(df_view, min_non_null=6, min_unique=2)
@@ -153,7 +154,7 @@ with tab_custom:
             size_col=None if size_choice == "None" else size_choice,
             show_trendline=show_trend,
         ),
-        use_container_width=True,
+        **stretch_kwargs(),
     )
 
 with tab_corr:
@@ -172,7 +173,7 @@ with tab_corr:
         "edge_P80_mm",
     ]
     corr_cols = [c for c in corr_candidates if c in df_view.columns and df_view[c].nunique(dropna=True) > 1]
-    st.plotly_chart(plot_correlation_heatmap(df_view, corr_cols), use_container_width=True)
+    st.plotly_chart(plot_correlation_heatmap(df_view, corr_cols), **stretch_kwargs())
     st.info(
         "**Feature Selection Rationale:** `pressing_force_set_kN` (`r = 1.00` with `actual_specific_pressure`), "
         "`roll_speed_rpm` (`r = 0.97` with `roll_speed_set_m_s`), and `feed_F50_mm` (`r = 0.99` with `feed_F80_mm`) "
@@ -206,5 +207,5 @@ with tab_feas:
         }
     )
     feas_df = pd.DataFrame(feas_rows)
-    st.plotly_chart(plot_target_availability_bar(feas_df), use_container_width=True)
-    st.dataframe(feas_df, use_container_width=True)
+    st.plotly_chart(plot_target_availability_bar(feas_df), **stretch_kwargs())
+    st.dataframe(feas_df, **stretch_kwargs())

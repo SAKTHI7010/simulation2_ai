@@ -26,6 +26,7 @@ from src.visualization.ui_theme import (
     render_confidence_banner,
     render_data_provenance_sidebar,
     render_hero_banner,
+    stretch_kwargs,
     render_kpi_card,
 )
 
@@ -76,7 +77,7 @@ quick_presets = [
 ]
 for idx, (lbl, fn) in enumerate(quick_presets):
     with q_cols[idx]:
-        if st.button(lbl, use_container_width=True, key=f"scen_preset_{idx}"):
+        if st.button(lbl, **stretch_kwargs(), key=f"scen_preset_{idx}"):
             new_mod = fn(st.session_state["scen_base"])
             st.session_state["scen_mod"] = new_mod
             for fk, fv in new_mod.items():
@@ -129,7 +130,7 @@ sel_model = st.radio(
 run_scen_btn = st.button(
     "⚡ Run Scenario Prediction",
     type="primary",
-    use_container_width=True,
+    **stretch_kwargs(),
     key="run_scenario_btn",
 )
 
@@ -188,8 +189,8 @@ else:
                 delta_color=d_col,
             )
 
-    st.plotly_chart(plot_scenario_comparison_bar(comp_df), use_container_width=True)
-    st.dataframe(comp_df.drop(columns=["target"]), use_container_width=True)
+    st.plotly_chart(plot_scenario_comparison_bar(comp_df), **stretch_kwargs())
+    st.dataframe(comp_df.drop(columns=["target"]), **stretch_kwargs())
 
     st.markdown("---")
     st.markdown("### 🌊 Interactive 1D Sensitivity Curve (Around Baseline)")
@@ -234,5 +235,5 @@ else:
             baseline_x=snap_base[sweep_feat],
             modified_x=snap_mod[sweep_feat],
         ),
-        use_container_width=True,
+        **stretch_kwargs(),
     )
