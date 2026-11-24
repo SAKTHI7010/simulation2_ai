@@ -12,6 +12,8 @@ if str(PROJECT_ROOT) not in sys.path:
 import numpy as np
 import streamlit as st
 
+_STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split(".")[:2]) >= (1, 50) else {"use_container_width": True}
+
 st.set_page_config(page_title="Scenario Analysis | HPGR", page_icon="⚡", layout="wide")
 
 from src.models.predict import (
@@ -26,7 +28,6 @@ from src.visualization.ui_theme import (
     render_confidence_banner,
     render_data_provenance_sidebar,
     render_hero_banner,
-    stretch_kwargs,
     render_kpi_card,
 )
 
@@ -77,7 +78,7 @@ quick_presets = [
 ]
 for idx, (lbl, fn) in enumerate(quick_presets):
     with q_cols[idx]:
-        if st.button(lbl, **stretch_kwargs(), key=f"scen_preset_{idx}"):
+        if st.button(lbl, **_STRETCH_KW, key=f"scen_preset_{idx}"):
             new_mod = fn(st.session_state["scen_base"])
             st.session_state["scen_mod"] = new_mod
             for fk, fv in new_mod.items():
@@ -130,7 +131,7 @@ sel_model = st.radio(
 run_scen_btn = st.button(
     "⚡ Run Scenario Prediction",
     type="primary",
-    **stretch_kwargs(),
+    **_STRETCH_KW,
     key="run_scenario_btn",
 )
 
@@ -189,8 +190,8 @@ else:
                 delta_color=d_col,
             )
 
-    st.plotly_chart(plot_scenario_comparison_bar(comp_df), **stretch_kwargs())
-    st.dataframe(comp_df.drop(columns=["target"]), **stretch_kwargs())
+    st.plotly_chart(plot_scenario_comparison_bar(comp_df), **_STRETCH_KW)
+    st.dataframe(comp_df.drop(columns=["target"]), **_STRETCH_KW)
 
     st.markdown("---")
     st.markdown("### 🌊 Interactive 1D Sensitivity Curve (Around Baseline)")
@@ -235,5 +236,5 @@ else:
             baseline_x=snap_base[sweep_feat],
             modified_x=snap_mod[sweep_feat],
         ),
-        **stretch_kwargs(),
+        **_STRETCH_KW,
     )

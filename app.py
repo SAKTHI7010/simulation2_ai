@@ -11,6 +11,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 
+_STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split(".")[:2]) >= (1, 50) else {"use_container_width": True}
+
 st.set_page_config(
     page_title="HPGR Performance Prediction",
     page_icon="⚙️",
@@ -26,7 +28,6 @@ from src.visualization.ui_theme import (
     render_bwi_unavailable_card,
     render_data_provenance_sidebar,
     render_hero_banner,
-    stretch_kwargs,
     render_kpi_card,
 )
 
@@ -96,19 +97,19 @@ st.markdown(workflow_html, unsafe_allow_html=True)
 st.markdown("### 🧭 Explore the Dashboard")
 nav1, nav2, nav3 = st.columns(3)
 with nav1:
-    st.page_link("pages/1_Data_Overview.py", label="1. Data Overview & Audit", icon="📊", **stretch_kwargs())
+    st.page_link("pages/1_Data_Overview.py", label="1. Data Overview & Audit", icon="📊", **_STRETCH_KW)
     st.caption("Inspect the 21 pilot records, upload custom workbooks, verify physics equations, and review real vs. synthetic separation.")
-    st.page_link("pages/4_Model_Comparison.py", label="4. Model Comparison (LOOCV)", icon="🏆", **stretch_kwargs())
+    st.page_link("pages/4_Model_Comparison.py", label="4. Model Comparison (LOOCV)", icon="🏆", **_STRETCH_KW)
     st.caption("Compare Linear Regression, Random Forest, and GPR with leak-free Leave-One-Out Cross-Validation metrics and parity plots.")
 with nav2:
-    st.page_link("pages/2_Exploratory_Analysis.py", label="2. Exploratory Analysis", icon="🔍", **stretch_kwargs())
+    st.page_link("pages/2_Exploratory_Analysis.py", label="2. Exploratory Analysis", icon="🔍", **_STRETCH_KW)
     st.caption("Interactive scatter charts, multi-stream P80 comparison, correlation matrix, and target feasibility counts.")
-    st.page_link("pages/5_Scenario_Analysis.py", label="5. Scenario Analysis (What-If)", icon="⚡", **stretch_kwargs())
+    st.page_link("pages/5_Scenario_Analysis.py", label="5. Scenario Analysis (What-If)", icon="⚡", **_STRETCH_KW)
     st.caption("Compare baseline vs. modified operating conditions, inspect deltas, and explore 1D sensitivity curves.")
 with nav3:
-    st.page_link("pages/3_Prediction.py", label="3. Interactive Prediction", icon="🎯", **stretch_kwargs())
+    st.page_link("pages/3_Prediction.py", label="3. Interactive Prediction", icon="🎯", **_STRETCH_KW)
     st.caption("Adjust operating sliders, click Predict, and view predictions across all 5 targets with GPR uncertainty.")
-    st.page_link("pages/6_Confidence.py", label="6. Confidence & Limitations", icon="🛡️", **stretch_kwargs())
+    st.page_link("pages/6_Confidence.py", label="6. Confidence & Limitations", icon="🛡️", **_STRETCH_KW)
     st.caption("Audit training-range coverage, explore GPR uncertainty expansion, and review requirements for plant validation.")
 
 st.markdown("### ⚠️ Scope, Provenance & Scientific Limitations")

@@ -13,6 +13,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+_STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split(".")[:2]) >= (1, 50) else {"use_container_width": True}
+
 st.set_page_config(page_title="Model Comparison | HPGR", page_icon="🏆", layout="wide")
 
 from src.models.predict import load_trained_artifacts
@@ -26,7 +28,6 @@ from src.visualization.ui_theme import (
     apply_custom_theme,
     render_data_provenance_sidebar,
     render_hero_banner,
-    stretch_kwargs,
     render_kpi_card,
 )
 
@@ -90,7 +91,7 @@ with tab_table:
         horizontal=True,
         key="mc_metric_radio",
     )
-    st.plotly_chart(plot_model_metrics_comparison(eval_df, metric=metric_choice), **stretch_kwargs())
+    st.plotly_chart(plot_model_metrics_comparison(eval_df, metric=metric_choice), **_STRETCH_KW)
 
     st.markdown("#### Complete Per-Target Cross-Validation Table")
     display_cols = [
@@ -105,7 +106,7 @@ with tab_table:
         "max_abs_error",
         "is_best_loocv",
     ]
-    st.dataframe(eval_df[display_cols], **stretch_kwargs(), height=420)
+    st.dataframe(eval_df[display_cols], **_STRETCH_KW, height=420)
 
 with tab_parity:
     tgt_options = list(metadata["targets"].keys())
@@ -126,7 +127,7 @@ with tab_parity:
         with col_box:
             st.plotly_chart(
                 plot_actual_vs_predicted(loocv_df, sel_tgt, tinfo["label"], tinfo["unit"], m_key, m_lbl),
-                **stretch_kwargs(),
+                **_STRETCH_KW,
             )
 
     res_model = st.selectbox(
@@ -137,7 +138,7 @@ with tab_parity:
     )
     st.plotly_chart(
         plot_residuals(loocv_df, sel_tgt, tinfo["label"], tinfo["unit"], res_model, tinfo["models"][res_model]["label"]),
-        **stretch_kwargs(),
+        **_STRETCH_KW,
     )
 
 with tab_effects:
@@ -172,7 +173,7 @@ with tab_effects:
             paper_bgcolor="#111A2E",
             font=dict(color="#E2E8F0"),
         )
-        st.plotly_chart(fig_lr, **stretch_kwargs())
+        st.plotly_chart(fig_lr, **_STRETCH_KW)
 
     with e_c2:
         rf_imps = tinfo_e["models"]["random_forest"].get("feature_importances", {})
@@ -197,7 +198,7 @@ with tab_effects:
             paper_bgcolor="#111A2E",
             font=dict(color="#E2E8F0"),
         )
-        st.plotly_chart(fig_rf, **stretch_kwargs())
+        st.plotly_chart(fig_rf, **_STRETCH_KW)
 
     st.info(
         f"**Fitted GPR Kernel (`{tinfo_e['label']}`):** `{tinfo_e['models']['gpr'].get('fitted_kernel', '')}`\n\n"

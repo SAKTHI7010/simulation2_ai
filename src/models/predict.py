@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import threading
 import warnings
@@ -14,7 +15,7 @@ import pandas as pd
 import sklearn
 
 from src.data_loader import PROJECT_ROOT, load_physics_config
-from src.models.train_models import refit_final_pipelines_fast, train_and_save_all
+from src.models import train_models as _tm
 from src.models.uncertainty import check_input_ranges, compute_gpr_prediction_with_uncertainty
 from src.physics.hpgr_equations import (
     compute_pressing_force_from_fsp,
@@ -39,11 +40,16 @@ def load_trained_artifacts(auto_train: bool = True, force_reload: bool = False) 
         if _ARTIFACT_CACHE is not None and not force_reload:
             return _ARTIFACT_CACHE
 
+        def _fast_refit(meta: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+            if not hasattr(_tm, "refit_final_pipelines_fast"):
+                importlib.reload(_tm)
+            return _tm.refit_final_pipelines_fast(metadata=meta, models_dir=MODELS_DIR)
+
         meta_path = MODELS_DIR / "metadata.json"
         if not meta_path.exists():
             if not auto_train:
                 raise FileNotFoundError(f"Model metadata not found at {meta_path}")
-            train_and_save_all()
+            _tm.train_and_save_all()
 
         with meta_path.open("r", encoding="utf-8") as fh:
             metadata = json.load(fh)
@@ -60,14 +66,14 @@ def load_trained_artifacts(auto_train: bool = True, force_reload: bool = False) 
             return loaded
 
         if auto_train and metadata.get("sklearn_version") != sklearn.__version__:
-            pipelines = refit_final_pipelines_fast(metadata=metadata, models_dir=MODELS_DIR)
+            pipelines = _fast_refit(metadata)
         else:
             try:
                 pipelines = _load_all_pipelines(metadata)
             except Exception:
                 if not auto_train:
                     raise
-                pipelines = refit_final_pipelines_fast(metadata=metadata, models_dir=MODELS_DIR)
+                pipelines = _fast_refit(metadata)
 
         eval_path = PROCESSED_DIR / "model_evaluation_report.csv"
         loocv_path = PROCESSED_DIR / "loocv_predictions.csv"
