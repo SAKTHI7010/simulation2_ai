@@ -27,7 +27,37 @@ from src.physics.hpgr_equations import (
 MODELS_DIR: Path = PROJECT_ROOT / "models"
 PROCESSED_DIR: Path = PROJECT_ROOT / "data" / "processed"
 _ARTIFACT_CACHE: Dict[str, Any] | None = None
+_META_CACHE: Dict[str, Any] | None = None
 _ARTIFACT_LOCK = threading.Lock()
+_FAST_CLOUD_V2 = True
+
+warnings.filterwarnings("ignore", message=".*sklearn\\.utils\\.parallel.*")
+
+
+def load_metadata_and_reports(force_reload: bool = False) -> Dict[str, Any]:
+    """Load metadata.json and LOOCV CSV reports instantaneously without loading/fitting models."""
+    global _META_CACHE
+    if _META_CACHE is not None and not force_reload:
+        return _META_CACHE
+
+    meta_path = MODELS_DIR / "metadata.json"
+    if not meta_path.exists():
+        _tm.train_and_save_all()
+
+    with meta_path.open("r", encoding="utf-8") as fh:
+        metadata = json.load(fh)
+
+    eval_path = PROCESSED_DIR / "model_evaluation_report.csv"
+    loocv_path = PROCESSED_DIR / "loocv_predictions.csv"
+    eval_df = pd.read_csv(eval_path) if eval_path.exists() else pd.DataFrame()
+    loocv_df = pd.read_csv(loocv_path) if loocv_path.exists() else pd.DataFrame()
+
+    _META_CACHE = {
+        "metadata": metadata,
+        "eval_df": eval_df,
+        "loocv_df": loocv_df,
+    }
+    return _META_CACHE
 
 
 def load_trained_artifacts(auto_train: bool = True, force_reload: bool = False) -> Dict[str, Any]:

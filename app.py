@@ -21,7 +21,11 @@ st.set_page_config(
 )
 
 from src.data_loader import WorkbookLoadError, load_operating_data, load_physics_config
-from src.models.predict import load_trained_artifacts
+import importlib
+from src.models import predict as _pm, train_models as _tm
+if not getattr(_pm, "_FAST_CLOUD_V2", False):
+    importlib.reload(_tm)
+    importlib.reload(_pm)
 from src.visualization.ui_theme import (
     PALETTE,
     apply_custom_theme,
@@ -53,7 +57,7 @@ render_hero_banner(
 try:
     config = load_physics_config()
     df_real = load_operating_data()
-    bundle = load_trained_artifacts(auto_train=True)
+    bundle = _pm.load_metadata_and_reports()
     metadata = bundle["metadata"]
 except (WorkbookLoadError, Exception) as exc:
     st.error(f"Startup Error: {exc}")

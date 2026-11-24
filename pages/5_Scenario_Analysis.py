@@ -16,11 +16,11 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Scenario Analysis | HPGR", page_icon="⚡", layout="wide")
 
-from src.models.predict import (
-    generate_sensitivity_curve,
-    load_trained_artifacts,
-    predict_scenario_comparison,
-)
+import importlib
+from src.models import predict as _pm, train_models as _tm
+if not getattr(_pm, "_FAST_CLOUD_V2", False):
+    importlib.reload(_tm)
+    importlib.reload(_pm)
 from src.visualization.charts import plot_scenario_comparison_bar, plot_sensitivity_sweep
 from src.visualization.ui_theme import (
     PALETTE,
@@ -42,12 +42,12 @@ render_hero_banner(
 )
 
 try:
-    bundle = load_trained_artifacts(auto_train=True)
+    meta_bundle = _pm.load_metadata_and_reports()
 except Exception as exc:
-    st.error(f"Error loading model artifacts: {exc}")
+    st.error(f"Error loading model metadata: {exc}")
     st.stop()
 
-metadata = bundle["metadata"]
+metadata = meta_bundle["metadata"]
 feature_defs = metadata["feature_definitions"]
 global_bounds = metadata["global_feature_bounds"]
 
@@ -136,9 +136,11 @@ run_scen_btn = st.button(
 )
 
 if run_scen_btn:
-    st.session_state["scen_result"] = predict_scenario_comparison(
-        baseline_inputs, modified_inputs, model_key=sel_model, artifacts=bundle
-    )
+    with st.spinner("Running scenario comparison..."):
+        bundle = _pm.load_trained_artifacts(auto_train=True)
+        st.session_state["scen_result"] = _pm.predict_scenario_comparison(
+            baseline_inputs, modified_inputs, model_key=sel_model, artifacts=bundle
+        )
     st.session_state["scen_snapshot"] = {
         "base": dict(baseline_inputs),
         "mod": dict(modified_inputs),
@@ -216,13 +218,13 @@ else:
     b_sel = tinfo_sel["feature_bounds"][sweep_feat]
     sweep_vals = np.linspace(float(fdef_sel["slider_min"]), float(fdef_sel["slider_max"]), 60)
 
-    sweep_df = generate_sensitivity_curve(
+    sweep_df = _pm.generate_sensitivity_curve(
         snap_base,
         sweep_feature=sweep_feat,
         sweep_values=sweep_vals,
         target=sweep_tgt,
         model_key=snap_model,
-        artifacts=bundle,
+        artifacts=_pm.load_trained_artifacts(auto_train=True),
     )
 
     st.plotly_chart(

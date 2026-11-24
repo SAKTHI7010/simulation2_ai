@@ -17,7 +17,11 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Model Comparison | HPGR", page_icon="🏆", layout="wide")
 
-from src.models.predict import load_trained_artifacts
+import importlib
+from src.models import predict as _pm, train_models as _tm
+if not getattr(_pm, "_FAST_CLOUD_V2", False):
+    importlib.reload(_tm)
+    importlib.reload(_pm)
 from src.visualization.charts import (
     plot_actual_vs_predicted,
     plot_model_metrics_comparison,
@@ -42,7 +46,7 @@ render_hero_banner(
 )
 
 try:
-    bundle = load_trained_artifacts(auto_train=True)
+    bundle = _pm.load_metadata_and_reports()
 except Exception as exc:
     st.error(f"Error loading evaluation artifacts: {exc}")
     st.stop()

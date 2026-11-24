@@ -17,7 +17,11 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Confidence & Limitations | HPGR", page_icon="🛡️", layout="wide")
 
-from src.models.predict import generate_sensitivity_curve, load_trained_artifacts
+import importlib
+from src.models import predict as _pm, train_models as _tm
+if not getattr(_pm, "_FAST_CLOUD_V2", False):
+    importlib.reload(_tm)
+    importlib.reload(_pm)
 from src.models.uncertainty import check_input_ranges
 from src.visualization.charts import plot_gpr_uncertainty_profile, plot_training_range_bullets
 from src.visualization.ui_theme import (
@@ -39,12 +43,12 @@ render_hero_banner(
 )
 
 try:
-    bundle = load_trained_artifacts(auto_train=True)
+    meta_bundle = _pm.load_metadata_and_reports()
 except Exception as exc:
-    st.error(f"Error loading model artifacts: {exc}")
+    st.error(f"Error loading model metadata: {exc}")
     st.stop()
 
-metadata = bundle["metadata"]
+metadata = meta_bundle["metadata"]
 feature_defs = metadata["feature_definitions"]
 global_bounds = metadata["global_feature_bounds"]
 labels = {f["name"]: f["label"] for f in feature_defs}
@@ -165,13 +169,13 @@ else:
     tinfo_u = metadata["targets"][u_tgt]
     b_u = tinfo_u["feature_bounds"][u_feat]
     sweep_u_vals = np.linspace(float(fdef_u["slider_min"]), float(fdef_u["slider_max"]), 70)
-    sweep_u_df = generate_sensitivity_curve(
+    sweep_u_df = _pm.generate_sensitivity_curve(
         snap_inputs,
         sweep_feature=u_feat,
         sweep_values=sweep_u_vals,
         target=u_tgt,
         model_key="gpr",
-        artifacts=bundle,
+        artifacts=_pm.load_trained_artifacts(auto_train=True),
     )
 
     st.plotly_chart(

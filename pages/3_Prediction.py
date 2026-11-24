@@ -15,8 +15,12 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Prediction | HPGR", page_icon="🎯", layout="wide")
 
+import importlib
 from src.data_loader import WorkbookLoadError, load_operating_data, load_physics_config
-from src.models.predict import load_trained_artifacts, predict_all_targets
+from src.models import predict as _pm, train_models as _tm
+if not getattr(_pm, "_FAST_CLOUD_V2", False):
+    importlib.reload(_tm)
+    importlib.reload(_pm)
 from src.models.uncertainty import find_nearest_real_tests
 from src.physics.hpgr_equations import compute_pressing_force_from_fsp, compute_rpm_from_speed
 from src.visualization.charts import plot_prediction_model_compare
@@ -43,12 +47,12 @@ render_hero_banner(
 try:
     config = load_physics_config()
     df_real = load_operating_data()
-    bundle = load_trained_artifacts(auto_train=True)
+    meta_bundle = _pm.load_metadata_and_reports()
 except (WorkbookLoadError, Exception) as exc:
-    st.error(f"Error loading prediction artifacts: {exc}")
+    st.error(f"Error loading prediction metadata: {exc}")
     st.stop()
 
-metadata = bundle["metadata"]
+metadata = meta_bundle["metadata"]
 feature_defs = metadata["feature_definitions"]
 features = metadata["features"]
 global_bounds = metadata["global_feature_bounds"]
@@ -162,9 +166,11 @@ with left_col:
     )
 
 if run_clicked:
-    st.session_state["pred_result"] = predict_all_targets(
-        current_inputs, model_key=selected_model, artifacts=bundle
-    )
+    with st.spinner("Calibrating HPGR models and computing predictions..."):
+        bundle = _pm.load_trained_artifacts(auto_train=True)
+        st.session_state["pred_result"] = _pm.predict_all_targets(
+            current_inputs, model_key=selected_model, artifacts=bundle
+        )
     st.session_state["pred_snapshot_inputs"] = dict(current_inputs)
     st.session_state["pred_snapshot_model"] = selected_model
 
