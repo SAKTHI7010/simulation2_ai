@@ -17,12 +17,9 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Confidence & Limitations | HPGR", page_icon="🛡️", layout="wide")
 
-import importlib
-from src.models import predict as _pm, train_models as _tm
-if not getattr(_pm, "_FAST_CLOUD_V2", False):
-    importlib.reload(_tm)
-    importlib.reload(_pm)
+from src.models import predict as _pm
 from src.models.uncertainty import check_input_ranges
+from src.visualization.cache import cached_metadata_and_reports, cached_trained_artifacts
 from src.visualization.charts import plot_gpr_uncertainty_profile, plot_training_range_bullets
 from src.visualization.ui_theme import (
     apply_custom_theme,
@@ -43,7 +40,7 @@ render_hero_banner(
 )
 
 try:
-    meta_bundle = _pm.load_metadata_and_reports()
+    meta_bundle = cached_metadata_and_reports()
 except Exception as exc:
     st.error(f"Error loading model metadata: {exc}")
     st.stop()
@@ -175,7 +172,7 @@ else:
         sweep_values=sweep_u_vals,
         target=u_tgt,
         model_key="gpr",
-        artifacts=_pm.load_trained_artifacts(auto_train=True),
+        artifacts=cached_trained_artifacts(),
     )
 
     st.plotly_chart(

@@ -15,14 +15,16 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Prediction | HPGR", page_icon="🎯", layout="wide")
 
-import importlib
-from src.data_loader import WorkbookLoadError, load_operating_data, load_physics_config
-from src.models import predict as _pm, train_models as _tm
-if not getattr(_pm, "_FAST_CLOUD_V2", False):
-    importlib.reload(_tm)
-    importlib.reload(_pm)
+from src.data_loader import WorkbookLoadError
+from src.models import predict as _pm
 from src.models.uncertainty import find_nearest_real_tests
 from src.physics.hpgr_equations import compute_pressing_force_from_fsp, compute_rpm_from_speed
+from src.visualization.cache import (
+    cached_metadata_and_reports,
+    cached_physics_config,
+    cached_real_operating_data,
+    cached_trained_artifacts,
+)
 from src.visualization.charts import plot_prediction_model_compare
 from src.visualization.ui_theme import (
     PALETTE,
@@ -45,9 +47,8 @@ render_hero_banner(
 )
 
 try:
-    config = load_physics_config()
-    df_real = load_operating_data()
-    meta_bundle = _pm.load_metadata_and_reports()
+    config = cached_physics_config()
+    meta_bundle = cached_metadata_and_reports()
 except (WorkbookLoadError, Exception) as exc:
     st.error(f"Error loading prediction metadata: {exc}")
     st.stop()
@@ -167,7 +168,7 @@ with left_col:
 
 if run_clicked:
     with st.spinner("Calibrating HPGR models and computing predictions..."):
-        bundle = _pm.load_trained_artifacts(auto_train=True)
+        bundle = cached_trained_artifacts()
         st.session_state["pred_result"] = _pm.predict_all_targets(
             current_inputs, model_key=selected_model, artifacts=bundle
         )
@@ -270,7 +271,7 @@ if "pred_result" in st.session_state:
         st.plotly_chart(plot_prediction_model_compare(preds[chosen_tgt]), **_STRETCH_KW)
     with comp_c2:
         st.markdown("#### Top 3 Closest Real Pilot Tests (Range-Normalized Euclidean Distance)")
-        nearest_df = find_nearest_real_tests(snap_inputs, df_real, features, global_bounds, top_k=3)
+        nearest_df = find_nearest_real_tests(snap_inputs, cached_real_operating_data(), features, global_bounds, top_k=3)
         st.dataframe(nearest_df, **_STRETCH_KW, height=280)
 
 render_bwi_unavailable_card()

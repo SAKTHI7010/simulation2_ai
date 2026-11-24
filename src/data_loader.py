@@ -62,6 +62,7 @@ class WorkbookLoadError(RuntimeError):
 
 _CONFIG_CACHE: Dict[str, Any] | None = None
 _REAL_OPERATING_CACHE: pd.DataFrame | None = None
+_REAL_SHEETS_CACHE: Dict[str, pd.DataFrame] | None = None
 
 
 def load_physics_config(config_path: Union[str, Path, None] = None) -> Dict[str, Any]:
@@ -109,8 +110,15 @@ def _open_excel_source(source: Union[str, Path, bytes, io.BytesIO, Any, None]) -
     return pd.ExcelFile(source, engine="openpyxl")
 
 
-def load_workbook_sheets(source: Union[str, Path, bytes, io.BytesIO, Any, None] = None) -> Dict[str, pd.DataFrame]:
-    """Load all sheets from the HPGR Excel workbook without altering source values."""
+def load_workbook_sheets(
+    source: Union[str, Path, bytes, io.BytesIO, Any, None] = None,
+    include_raw_text: bool = True,
+) -> Dict[str, pd.DataFrame]:
+    """Load sheets from the HPGR Excel workbook without altering source values."""
+    global _REAL_SHEETS_CACHE
+    if source is None and not include_raw_text and _REAL_SHEETS_CACHE is not None:
+        return {k: v.copy() for k, v in _REAL_SHEETS_CACHE.items()}
+
     try:
         with _open_excel_source(source) as xl:
             if "Operating_Data" not in xl.sheet_names:
@@ -119,7 +127,11 @@ def load_workbook_sheets(source: Union[str, Path, bytes, io.BytesIO, Any, None] 
                 )
             sheets: Dict[str, pd.DataFrame] = {}
             for sheet_name in xl.sheet_names:
+                if not include_raw_text and sheet_name == "Raw_AppendixC_Text":
+                    continue
                 sheets[sheet_name] = pd.read_excel(xl, sheet_name=sheet_name)
+            if source is None and not include_raw_text:
+                _REAL_SHEETS_CACHE = {k: v.copy() for k, v in sheets.items()}
             return sheets
     except WorkbookLoadError:
         raise
@@ -136,7 +148,7 @@ def load_operating_data(
     if source is None and include_description and _REAL_OPERATING_CACHE is not None:
         return _REAL_OPERATING_CACHE.copy()
 
-    sheets = load_workbook_sheets(source)
+    sheets = load_workbook_sheets(source, include_raw_text=False)
     op_df = sheets["Operating_Data"].copy()
 
     if include_description and "Test_Key" in sheets:

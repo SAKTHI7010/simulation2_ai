@@ -201,6 +201,18 @@ a[data-testid="stPageLink-NavLink"] {
     border-radius: 10px !important;
     padding: 0.45rem 0.75rem !important;
 }
+/* Vibrant pill switcher for horizontal view radio controls */
+div[role="radiogroup"][aria-orientation="horizontal"] {
+    gap: 8px;
+    flex-wrap: wrap;
+}
+div[role="radiogroup"][aria-orientation="horizontal"] > label {
+    background: rgba(19, 28, 49, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 10px;
+    padding: 0.4rem 0.9rem;
+    font-weight: 600;
+}
 </style>""",
         unsafe_allow_html=True,
     )

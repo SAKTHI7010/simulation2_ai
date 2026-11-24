@@ -2,20 +2,16 @@
 
 from __future__ import annotations
 
-import importlib
 import json
 import threading
 import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
-import joblib
 import numpy as np
 import pandas as pd
-import sklearn
 
 from src.data_loader import PROJECT_ROOT, load_physics_config
-from src.models import train_models as _tm
 from src.models.uncertainty import check_input_ranges, compute_gpr_prediction_with_uncertainty
 from src.physics.hpgr_equations import (
     compute_pressing_force_from_fsp,
@@ -30,6 +26,7 @@ _ARTIFACT_CACHE: Dict[str, Any] | None = None
 _META_CACHE: Dict[str, Any] | None = None
 _ARTIFACT_LOCK = threading.Lock()
 _FAST_CLOUD_V2 = True
+_FAST_CLOUD_V3 = True
 
 warnings.filterwarnings("ignore", message=".*sklearn\\.utils\\.parallel.*")
 
@@ -42,6 +39,8 @@ def load_metadata_and_reports(force_reload: bool = False) -> Dict[str, Any]:
 
     meta_path = MODELS_DIR / "metadata.json"
     if not meta_path.exists():
+        from src.models import train_models as _tm
+
         _tm.train_and_save_all()
 
     with meta_path.open("r", encoding="utf-8") as fh:
@@ -69,6 +68,11 @@ def load_trained_artifacts(auto_train: bool = True, force_reload: bool = False) 
     with _ARTIFACT_LOCK:
         if _ARTIFACT_CACHE is not None and not force_reload:
             return _ARTIFACT_CACHE
+
+        import importlib
+        import joblib
+        import sklearn
+        from src.models import train_models as _tm
 
         def _fast_refit(meta: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
             if not hasattr(_tm, "refit_final_pipelines_fast"):

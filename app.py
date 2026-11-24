@@ -20,12 +20,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-from src.data_loader import WorkbookLoadError, load_operating_data, load_physics_config
-import importlib
-from src.models import predict as _pm, train_models as _tm
-if not getattr(_pm, "_FAST_CLOUD_V2", False):
-    importlib.reload(_tm)
-    importlib.reload(_pm)
+from src.data_loader import WorkbookLoadError
+from src.visualization.cache import cached_metadata_and_reports, cached_physics_config
 from src.visualization.ui_theme import (
     PALETTE,
     apply_custom_theme,
@@ -55,9 +51,8 @@ render_hero_banner(
 )
 
 try:
-    config = load_physics_config()
-    df_real = load_operating_data()
-    bundle = _pm.load_metadata_and_reports()
+    config = cached_physics_config()
+    bundle = cached_metadata_and_reports()
     metadata = bundle["metadata"]
 except (WorkbookLoadError, Exception) as exc:
     st.error(f"Startup Error: {exc}")
@@ -65,7 +60,7 @@ except (WorkbookLoadError, Exception) as exc:
 
 c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
-    render_kpi_card("Pilot Tests", f"{len(df_real)}", "records", "Phase One (12) + Phase Two (9)", PALETTE["indigo"])
+    render_kpi_card("Pilot Tests", f"{metadata['dataset_rows']}", "records", "Phase One (12) + Phase Two (9)", PALETTE["indigo"])
 with c2:
     render_kpi_card("Core Inputs", f"{len(metadata['features'])}", "features", "0 missing across all 21 tests", PALETTE["teal"])
 with c3:

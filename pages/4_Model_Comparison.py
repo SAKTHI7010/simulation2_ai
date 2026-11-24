@@ -17,15 +17,11 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Model Comparison | HPGR", page_icon="🏆", layout="wide")
 
-import importlib
-from src.models import predict as _pm, train_models as _tm
-if not getattr(_pm, "_FAST_CLOUD_V2", False):
-    importlib.reload(_tm)
-    importlib.reload(_pm)
-from src.visualization.charts import (
-    plot_actual_vs_predicted,
-    plot_model_metrics_comparison,
-    plot_residuals,
+from src.visualization.cache import (
+    cached_actual_vs_predicted,
+    cached_metadata_and_reports,
+    cached_model_metrics_bar,
+    cached_residuals,
 )
 from src.visualization.ui_theme import (
     PALETTE,
@@ -46,7 +42,7 @@ render_hero_banner(
 )
 
 try:
-    bundle = _pm.load_metadata_and_reports()
+    bundle = cached_metadata_and_reports()
 except Exception as exc:
     st.error(f"Error loading evaluation artifacts: {exc}")
     st.stop()
@@ -65,7 +61,6 @@ st.info(
     "`n=16` for scale-up, centre, and edge P80). Models are **never** compared by training score."
 )
 
-# Summary KPIs
 best_rows = eval_df[eval_df["is_best_loocv"] == True]  # noqa: E712
 cols = st.columns(len(best_rows))
 accents = [PALETTE["indigo"], PALETTE["teal"], PALETTE["violet"], PALETTE["emerald"], PALETTE["coral"]]
@@ -79,15 +74,19 @@ for idx, (_, row) in enumerate(best_rows.iterrows()):
             accents[idx % len(accents)],
         )
 
-tab_table, tab_parity, tab_effects = st.tabs(
-    [
+mc_view = st.radio(
+    "Select Model Comparison View",
+    options=[
         "📊 LOOCV Metrics & Benchmarks",
         "🎯 Actual vs. Predicted & Residuals",
         "🔬 Feature Effects & Model Insights",
-    ]
+    ],
+    horizontal=True,
+    label_visibility="collapsed",
+    key="mc_view_radio",
 )
 
-with tab_table:
+if mc_view == "📊 LOOCV Metrics & Benchmarks":
     metric_choice = st.radio(
         "Select Metric to Plot Across Targets",
         options=["r2", "rmse", "mae"],
@@ -95,7 +94,7 @@ with tab_table:
         horizontal=True,
         key="mc_metric_radio",
     )
-    st.plotly_chart(plot_model_metrics_comparison(eval_df, metric=metric_choice), **_STRETCH_KW)
+    st.plotly_chart(cached_model_metrics_bar(eval_df, metric=metric_choice), **_STRETCH_KW)
 
     st.markdown("#### Complete Per-Target Cross-Validation Table")
     display_cols = [
@@ -112,7 +111,7 @@ with tab_table:
     ]
     st.dataframe(eval_df[display_cols], **_STRETCH_KW, height=420)
 
-with tab_parity:
+elif mc_view == "🎯 Actual vs. Predicted & Residuals":
     tgt_options = list(metadata["targets"].keys())
     sel_tgt = st.selectbox(
         "Select Target to Inspect Parity & Residuals",
@@ -130,7 +129,7 @@ with tab_parity:
     ]:
         with col_box:
             st.plotly_chart(
-                plot_actual_vs_predicted(loocv_df, sel_tgt, tinfo["label"], tinfo["unit"], m_key, m_lbl),
+                cached_actual_vs_predicted(loocv_df, sel_tgt, tinfo["label"], tinfo["unit"], m_key, m_lbl),
                 **_STRETCH_KW,
             )
 
@@ -141,11 +140,11 @@ with tab_parity:
         key="mc_resid_model",
     )
     st.plotly_chart(
-        plot_residuals(loocv_df, sel_tgt, tinfo["label"], tinfo["unit"], res_model, tinfo["models"][res_model]["label"]),
+        cached_residuals(loocv_df, sel_tgt, tinfo["label"], tinfo["unit"], res_model, tinfo["models"][res_model]["label"]),
         **_STRETCH_KW,
     )
 
-with tab_effects:
+else:
     sel_eff_tgt = st.selectbox(
         "Select Target for Feature Importance & Coefficients",
         options=list(metadata["targets"].keys()),
@@ -157,9 +156,7 @@ with tab_effects:
 
     with e_c1:
         lr_coefs = tinfo_e["models"]["linear_regression"].get("standardized_coefficients", {})
-        coef_df = pd.DataFrame(
-            [{"Feature": k, "Standardized Coef": v} for k, v in lr_coefs.items()]
-        )
+        coef_df = pd.DataFrame([{"Feature": k, "Standardized Coef": v} for k, v in lr_coefs.items()])
         fig_lr = px.bar(
             coef_df,
             x="Feature",
@@ -181,9 +178,9 @@ with tab_effects:
 
     with e_c2:
         rf_imps = tinfo_e["models"]["random_forest"].get("feature_importances", {})
-        imp_df = pd.DataFrame(
-            [{"Feature": k, "Importance": v} for k, v in rf_imps.items()]
-        ).sort_values("Importance", ascending=True)
+        imp_df = pd.DataFrame([{"Feature": k, "Importance": v} for k, v in rf_imps.items()]).sort_values(
+            "Importance", ascending=True
+        )
         fig_rf = px.bar(
             imp_df,
             x="Importance",

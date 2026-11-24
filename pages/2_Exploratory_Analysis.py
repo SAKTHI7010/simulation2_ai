@@ -16,14 +16,15 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Exploratory Analysis | HPGR", page_icon="🔍", layout="wide")
 
-from src.data_loader import WorkbookLoadError, load_operating_data, load_physics_config
-from src.physics.feature_engineering import add_physics_diagnostic_columns
+from src.data_loader import WorkbookLoadError
 from src.preprocessing import get_suitable_numeric_columns
-from src.visualization.charts import (
-    plot_correlation_heatmap,
-    plot_force_vs_p80_multi,
-    plot_scatter_with_phase,
-    plot_target_availability_bar,
+from src.visualization.cache import (
+    cached_correlation_heatmap,
+    cached_eda_frame,
+    cached_force_vs_p80,
+    cached_physics_config,
+    cached_scatter_phase,
+    cached_target_avail_bar,
 )
 from src.visualization.ui_theme import (
     apply_custom_theme,
@@ -42,16 +43,11 @@ render_hero_banner(
 )
 
 try:
-    config = load_physics_config()
-    df_raw = load_operating_data()
+    config = cached_physics_config()
+    df = cached_eda_frame()
 except WorkbookLoadError as exc:
     st.error(f"Data Load Error: {exc}")
     st.stop()
-
-geom = config["machine_geometry"]
-df = add_physics_diagnostic_columns(
-    df_raw, diameter_m=float(geom["roll_diameter_m"]), width_m=float(geom["roll_width_m"])
-)
 
 ctrl1, ctrl2 = st.columns([2, 1])
 with ctrl1:
@@ -65,20 +61,24 @@ if df_view.empty:
     st.warning("Select at least one phase to display charts.")
     st.stop()
 
-tab_rel, tab_custom, tab_corr, tab_feas = st.tabs(
-    [
+eda_view = st.radio(
+    "Select EDA View",
+    options=[
         "⚡ Key HPGR Relationships",
         "🎨 Custom Scatter Explorer",
         "🔥 Correlation Matrix",
         "🎯 Target Feasibility",
-    ]
+    ],
+    horizontal=True,
+    label_visibility="collapsed",
+    key="eda_view_radio",
 )
 
-with tab_rel:
+if eda_view == "⚡ Key HPGR Relationships":
     r1c1, r1c2 = st.columns(2)
     with r1c1:
         st.plotly_chart(
-            plot_scatter_with_phase(
+            cached_scatter_phase(
                 df_view,
                 x_col="pressing_force_set_kN",
                 y_col="scaleup_P80_mm",
@@ -91,7 +91,7 @@ with tab_rel:
         )
     with r1c2:
         st.plotly_chart(
-            plot_scatter_with_phase(
+            cached_scatter_phase(
                 df_view,
                 x_col="roll_speed_set_m_s",
                 y_col="throughput_t_h",
@@ -106,7 +106,7 @@ with tab_rel:
     r2c1, r2c2 = st.columns(2)
     with r2c1:
         st.plotly_chart(
-            plot_scatter_with_phase(
+            cached_scatter_phase(
                 df_view,
                 x_col="feed_moisture_pct",
                 y_col="net_specific_energy_kWh_t",
@@ -118,9 +118,9 @@ with tab_rel:
             **_STRETCH_KW,
         )
     with r2c2:
-        st.plotly_chart(plot_force_vs_p80_multi(df_view), **_STRETCH_KW)
+        st.plotly_chart(cached_force_vs_p80(df_view), **_STRETCH_KW)
 
-with tab_custom:
+elif eda_view == "🎨 Custom Scatter Explorer":
     suitable_cols = get_suitable_numeric_columns(df_view, min_non_null=6, min_unique=2)
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -145,7 +145,7 @@ with tab_custom:
             key="eda_custom_size",
         )
     st.plotly_chart(
-        plot_scatter_with_phase(
+        cached_scatter_phase(
             df_view,
             x_col=x_col,
             y_col=y_col,
@@ -158,7 +158,7 @@ with tab_custom:
         **_STRETCH_KW,
     )
 
-with tab_corr:
+elif eda_view == "🔥 Correlation Matrix":
     corr_candidates = [
         "actual_specific_pressure",
         "roll_speed_set_m_s",
@@ -173,8 +173,8 @@ with tab_corr:
         "centre_P80_mm",
         "edge_P80_mm",
     ]
-    corr_cols = [c for c in corr_candidates if c in df_view.columns and df_view[c].nunique(dropna=True) > 1]
-    st.plotly_chart(plot_correlation_heatmap(df_view, corr_cols), **_STRETCH_KW)
+    corr_cols = tuple(c for c in corr_candidates if c in df_view.columns and df_view[c].nunique(dropna=True) > 1)
+    st.plotly_chart(cached_correlation_heatmap(df_view, corr_cols), **_STRETCH_KW)
     st.info(
         "**Feature Selection Rationale:** `pressing_force_set_kN` (`r = 1.00` with `actual_specific_pressure`), "
         "`roll_speed_rpm` (`r = 0.97` with `roll_speed_set_m_s`), and `feed_F50_mm` (`r = 0.99` with `feed_F80_mm`) "
@@ -182,7 +182,7 @@ with tab_corr:
         "with only 2 unique values. Selecting the 4 orthogonal operating features gives 21/21 complete input rows without collinearity."
     )
 
-with tab_feas:
+else:
     feas_rows = []
     for t_def in config["targets"]:
         tn = t_def["name"]
@@ -208,5 +208,5 @@ with tab_feas:
         }
     )
     feas_df = pd.DataFrame(feas_rows)
-    st.plotly_chart(plot_target_availability_bar(feas_df), **_STRETCH_KW)
+    st.plotly_chart(cached_target_avail_bar(feas_df), **_STRETCH_KW)
     st.dataframe(feas_df, **_STRETCH_KW)

@@ -16,11 +16,8 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 
 st.set_page_config(page_title="Scenario Analysis | HPGR", page_icon="⚡", layout="wide")
 
-import importlib
-from src.models import predict as _pm, train_models as _tm
-if not getattr(_pm, "_FAST_CLOUD_V2", False):
-    importlib.reload(_tm)
-    importlib.reload(_pm)
+from src.models import predict as _pm
+from src.visualization.cache import cached_metadata_and_reports, cached_trained_artifacts
 from src.visualization.charts import plot_scenario_comparison_bar, plot_sensitivity_sweep
 from src.visualization.ui_theme import (
     PALETTE,
@@ -42,7 +39,7 @@ render_hero_banner(
 )
 
 try:
-    meta_bundle = _pm.load_metadata_and_reports()
+    meta_bundle = cached_metadata_and_reports()
 except Exception as exc:
     st.error(f"Error loading model metadata: {exc}")
     st.stop()
@@ -137,7 +134,7 @@ run_scen_btn = st.button(
 
 if run_scen_btn:
     with st.spinner("Running scenario comparison..."):
-        bundle = _pm.load_trained_artifacts(auto_train=True)
+        bundle = cached_trained_artifacts()
         st.session_state["scen_result"] = _pm.predict_scenario_comparison(
             baseline_inputs, modified_inputs, model_key=sel_model, artifacts=bundle
         )
@@ -224,7 +221,7 @@ else:
         sweep_values=sweep_vals,
         target=sweep_tgt,
         model_key=snap_model,
-        artifacts=_pm.load_trained_artifacts(auto_train=True),
+        artifacts=cached_trained_artifacts(),
     )
 
     st.plotly_chart(
