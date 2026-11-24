@@ -1,0 +1,20 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments & secrets
+.venv/
+venv/
+env/
+.env
+.streamlit/secrets.toml
+
+# OS / Editor artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log

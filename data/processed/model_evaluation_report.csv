@@ -1,0 +1,16 @@
+target,target_label,unit,model_key,model_label,n_samples,validation_method,mae,rmse,r2,max_abs_error,is_best_loocv
+centre_P80_mm,Centre Product P80,mm,linear_regression,Linear Regression,16,LOOCV,0.6067,0.7407,0.887,1.5787,True
+centre_P80_mm,Centre Product P80,mm,gpr,Gaussian Process Regression (GPR),16,LOOCV,0.6518,0.7781,0.8753,1.5883,False
+centre_P80_mm,Centre Product P80,mm,random_forest,Random Forest,16,LOOCV,0.7073,0.9586,0.8107,2.3639,False
+edge_P80_mm,Edge Product P80,mm,gpr,Gaussian Process Regression (GPR),16,LOOCV,0.7102,0.9421,0.9201,2.4293,True
+edge_P80_mm,Edge Product P80,mm,linear_regression,Linear Regression,16,LOOCV,0.7227,0.9468,0.9193,2.4813,False
+edge_P80_mm,Edge Product P80,mm,random_forest,Random Forest,16,LOOCV,1.3837,1.6967,0.7407,4.2609,False
+net_specific_energy_kWh_t,Net Specific Energy,kWh/t,gpr,Gaussian Process Regression (GPR),21,LOOCV,0.06,0.1022,0.8515,0.3211,True
+net_specific_energy_kWh_t,Net Specific Energy,kWh/t,linear_regression,Linear Regression,21,LOOCV,0.0739,0.1089,0.8313,0.347,False
+net_specific_energy_kWh_t,Net Specific Energy,kWh/t,random_forest,Random Forest,21,LOOCV,0.1535,0.2407,0.1765,0.6845,False
+scaleup_P80_mm,Scale-up Product P80,mm,linear_regression,Linear Regression,16,LOOCV,0.5482,0.6427,0.925,1.216,True
+scaleup_P80_mm,Scale-up Product P80,mm,gpr,Gaussian Process Regression (GPR),16,LOOCV,0.5751,0.6728,0.9179,1.257,False
+scaleup_P80_mm,Scale-up Product P80,mm,random_forest,Random Forest,16,LOOCV,0.7827,1.0182,0.8119,2.6016,False
+throughput_t_h,Press Throughput,t/h,gpr,Gaussian Process Regression (GPR),21,LOOCV,1.6365,2.4544,0.5311,7.7381,True
+throughput_t_h,Press Throughput,t/h,linear_regression,Linear Regression,21,LOOCV,2.0748,2.8822,0.3535,8.9615,False
+throughput_t_h,Press Throughput,t/h,random_forest,Random Forest,21,LOOCV,2.934,4.3481,-0.4715,11.1965,False

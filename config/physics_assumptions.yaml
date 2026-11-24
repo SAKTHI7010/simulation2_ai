@@ -1,0 +1,111 @@
+project:
+  name: "HPGR Performance Prediction System"
+  version: "1.0.0"
+  application_type: "Offline Physics-Informed ML Decision-Support Simulator"
+  source_thesis: "A Pilot-Scale Examination of a Novel High Pressure Grinding Roll / Stirred Mill Comminution Circuit for Hard-Rock Mining Applications (Jeffrey Adam Drozdiak, UBC, 2011)"
+  source_material: "Mesaba copper-nickel sulphide ore (pilot-scale HPGR tests)"
+  disclaimer: "Prototype decision-support simulator trained on 21 pilot-scale Mesaba Cu-Ni sulphide ore tests. Not validated for iron-ore plant data, Extract Met equipment, or automated PLC/SCADA control."
+
+machine_geometry:
+  roll_diameter_m: 0.750
+  roll_width_m: 0.220
+  static_gap_mm: 9.0
+  geometry_source: "Table C-2 Press Constants (Appendix C, Drozdiak 2011)"
+
+selected_features:
+  - name: "actual_specific_pressure"
+    label: "Specific Pressing Force"
+    unit: "N/mm²"
+    slider_min: 1.0
+    slider_max: 6.5
+    step: 0.05
+    default_value: 3.95
+    description: "Actual average specific pressing force Fsp = F / (D × L)."
+  - name: "roll_speed_set_m_s"
+    label: "Roll Peripheral Speed"
+    unit: "m/s"
+    slider_min: 0.45
+    slider_max: 1.10
+    step: 0.01
+    default_value: 0.75
+    description: "Set roll peripheral speed v (v = pi × D × rpm / 60)."
+  - name: "feed_moisture_pct"
+    label: "Feed Moisture Content"
+    unit: "%"
+    slider_min: 0.0
+    slider_max: 8.0
+    step: 0.1
+    default_value: 2.5
+    description: "Feed moisture stored as percentage points (2.5 means 2.5%)."
+  - name: "feed_F80_mm"
+    label: "Feed 80% Passing Size (F80)"
+    unit: "mm"
+    slider_min: 0.5
+    slider_max: 28.0
+    step: 0.1
+    default_value: 21.33
+    description: "Feed particle 80% passing size."
+
+targets:
+  - name: "throughput_t_h"
+    label: "Press Throughput"
+    unit: "t/h"
+    category: "throughput"
+    preferred: true
+    description: "HPGR mass throughput rate."
+  - name: "net_specific_energy_kWh_t"
+    label: "Net Specific Energy"
+    unit: "kWh/t"
+    category: "energy"
+    preferred: true
+    description: "Net specific comminution energy (Pt - Pi) / W. Preferred over total specific energy to isolate net grinding work from idle power."
+  - name: "scaleup_P80_mm"
+    label: "Scale-up Product P80"
+    unit: "mm"
+    category: "product_size"
+    preferred: true
+    description: "Scale-up composite product 80% passing size (reported in 16 of 21 tests)."
+  - name: "centre_P80_mm"
+    label: "Centre Product P80"
+    unit: "mm"
+    category: "product_size"
+    preferred: false
+    description: "Centre product stream 80% passing size (kept separate from edge P80)."
+  - name: "edge_P80_mm"
+    label: "Edge Product P80"
+    unit: "mm"
+    category: "product_size"
+    preferred: false
+    description: "Edge product stream 80% passing size (kept separate from centre P80)."
+
+unavailable_targets:
+  - name: "bond_work_index_reduction"
+    label: "Bond Work Index / Micro-Cracking Benefit"
+    unit: "kWh/t"
+    reason: "Before/after HPGR Bond Ball Mill Work Index measurements are not included in HPGR_Extracted_Data.xlsx. Must not be fabricated."
+
+modeling:
+  cv_method: "LOOCV"
+  random_state: 42
+  boundary_margin_pct: 0.05
+  models:
+    - key: "linear_regression"
+      label: "Linear Regression"
+    - key: "random_forest"
+      label: "Random Forest"
+    - key: "gpr"
+      label: "Gaussian Process Regression (GPR)"
+
+synthetic_policy:
+  enabled_for_exploration: true
+  n_samples: 40
+  seed: 42
+  output_file: "data/synthetic/hpgr_synthetic_exploration.csv"
+  purpose: "Software testing and visual exploration only; never used for model training or real-plant validation."
+  bounds:
+    actual_specific_pressure: [2.0, 5.0]
+    roll_speed_set_m_s: [0.60, 0.90]
+    feed_moisture_pct: [1.0, 5.8]
+    feed_F80_mm: [2.0, 22.0]
+    assumed_specific_throughput_constant: 298.0
+    assumed_idle_power_kw: 8.9

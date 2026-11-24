@@ -1,0 +1,700 @@
+{
+  "project": {
+    "name": "HPGR Performance Prediction System",
+    "version": "1.0.0",
+    "application_type": "Offline Physics-Informed ML Decision-Support Simulator",
+    "source_thesis": "A Pilot-Scale Examination of a Novel High Pressure Grinding Roll / Stirred Mill Comminution Circuit for Hard-Rock Mining Applications (Jeffrey Adam Drozdiak, UBC, 2011)",
+    "source_material": "Mesaba copper-nickel sulphide ore (pilot-scale HPGR tests)",
+    "disclaimer": "Prototype decision-support simulator trained on 21 pilot-scale Mesaba Cu-Ni sulphide ore tests. Not validated for iron-ore plant data, Extract Met equipment, or automated PLC/SCADA control."
+  },
+  "trained_at_utc": "2026-11-24T05:51:26.493802+00:00",
+  "sklearn_version": "1.3.2",
+  "data_version": "HPGR_Extracted_Data.xlsx (21 real pilot tests, Drozdiak UBC 2011)",
+  "validation_method": "LOOCV",
+  "features": [
+    "actual_specific_pressure",
+    "roll_speed_set_m_s",
+    "feed_moisture_pct",
+    "feed_F80_mm"
+  ],
+  "feature_definitions": [
+    {
+      "name": "actual_specific_pressure",
+      "label": "Specific Pressing Force",
+      "unit": "N/mm\u00b2",
+      "slider_min": 1.0,
+      "slider_max": 6.5,
+      "step": 0.05,
+      "default_value": 3.95,
+      "description": "Actual average specific pressing force Fsp = F / (D \u00d7 L)."
+    },
+    {
+      "name": "roll_speed_set_m_s",
+      "label": "Roll Peripheral Speed",
+      "unit": "m/s",
+      "slider_min": 0.45,
+      "slider_max": 1.1,
+      "step": 0.01,
+      "default_value": 0.75,
+      "description": "Set roll peripheral speed v (v = pi \u00d7 D \u00d7 rpm / 60)."
+    },
+    {
+      "name": "feed_moisture_pct",
+      "label": "Feed Moisture Content",
+      "unit": "%",
+      "slider_min": 0.0,
+      "slider_max": 8.0,
+      "step": 0.1,
+      "default_value": 2.5,
+      "description": "Feed moisture stored as percentage points (2.5 means 2.5%)."
+    },
+    {
+      "name": "feed_F80_mm",
+      "label": "Feed 80% Passing Size (F80)",
+      "unit": "mm",
+      "slider_min": 0.5,
+      "slider_max": 28.0,
+      "step": 0.1,
+      "default_value": 21.33,
+      "description": "Feed particle 80% passing size."
+    }
+  ],
+  "global_feature_bounds": {
+    "actual_specific_pressure": {
+      "min": 2.08,
+      "max": 4.92,
+      "mean": 3.854761904761905,
+      "median": 3.95,
+      "std": 0.5096235772373472,
+      "q10": 3.9,
+      "q90": 3.96
+    },
+    "roll_speed_set_m_s": {
+      "min": 0.61,
+      "max": 0.9,
+      "mean": 0.7538095238095239,
+      "median": 0.75,
+      "std": 0.04737891835787206,
+      "q10": 0.73,
+      "q90": 0.77
+    },
+    "feed_moisture_pct": {
+      "min": 1.0,
+      "max": 5.8,
+      "mean": 2.6714285714285713,
+      "median": 2.5,
+      "std": 0.9721845797701469,
+      "q10": 2.4,
+      "q90": 2.5
+    },
+    "feed_F80_mm": {
+      "min": 1.86,
+      "max": 21.77,
+      "mean": 16.76904761904762,
+      "median": 21.33,
+      "std": 7.20956025341484,
+      "q10": 6.16,
+      "q90": 21.54
+    }
+  },
+  "dataset_rows": 21,
+  "phase_counts": {
+    "Phase One": 12,
+    "Phase Two": 9
+  },
+  "targets": {
+    "throughput_t_h": {
+      "label": "Press Throughput",
+      "unit": "t/h",
+      "category": "throughput",
+      "description": "HPGR mass throughput rate.",
+      "n_samples": 21,
+      "test_ids": [
+        "T1A01",
+        "T1A02",
+        "T1A03",
+        "T1A04",
+        "T1A05",
+        "T1A06",
+        "T1A07",
+        "T1A08",
+        "T1A09",
+        "T1A10",
+        "T1A11",
+        "T1B01",
+        "T2A01",
+        "T2A02",
+        "T2A03",
+        "T2A04",
+        "T2B01",
+        "T2B02",
+        "T2B03",
+        "T2B04",
+        "T2B05"
+      ],
+      "feature_bounds": {
+        "actual_specific_pressure": {
+          "min": 2.08,
+          "max": 4.92,
+          "mean": 3.854761904761905,
+          "median": 3.95,
+          "std": 0.5096235772373472,
+          "q10": 3.9,
+          "q90": 3.96
+        },
+        "roll_speed_set_m_s": {
+          "min": 0.61,
+          "max": 0.9,
+          "mean": 0.7538095238095239,
+          "median": 0.75,
+          "std": 0.04737891835787206,
+          "q10": 0.73,
+          "q90": 0.77
+        },
+        "feed_moisture_pct": {
+          "min": 1.0,
+          "max": 5.8,
+          "mean": 2.6714285714285713,
+          "median": 2.5,
+          "std": 0.9721845797701469,
+          "q10": 2.4,
+          "q90": 2.5
+        },
+        "feed_F80_mm": {
+          "min": 1.86,
+          "max": 21.77,
+          "mean": 16.76904761904762,
+          "median": 21.33,
+          "std": 7.20956025341484,
+          "q10": 6.16,
+          "q90": 21.54
+        }
+      },
+      "target_min": 29.17,
+      "target_max": 46.17,
+      "target_mean": 36.7743,
+      "models": {
+        "linear_regression": {
+          "label": "Linear Regression",
+          "artifact": "throughput_t_h__linear_regression.joblib",
+          "metrics": {
+            "n_samples": 21,
+            "mae": 2.0748,
+            "rmse": 2.8822,
+            "r2": 0.3535,
+            "max_abs_error": 8.9615
+          },
+          "standardized_coefficients": {
+            "actual_specific_pressure": -0.4999,
+            "roll_speed_set_m_s": 2.1634,
+            "feed_moisture_pct": -1.51,
+            "feed_F80_mm": 1.0394
+          },
+          "intercept": 36.7743
+        },
+        "random_forest": {
+          "label": "Random Forest",
+          "artifact": "throughput_t_h__random_forest.joblib",
+          "metrics": {
+            "n_samples": 21,
+            "mae": 2.934,
+            "rmse": 4.3481,
+            "r2": -0.4715,
+            "max_abs_error": 11.1965
+          },
+          "feature_importances": {
+            "actual_specific_pressure": 0.2398,
+            "roll_speed_set_m_s": 0.3121,
+            "feed_moisture_pct": 0.1747,
+            "feed_F80_mm": 0.2735
+          }
+        },
+        "gpr": {
+          "label": "Gaussian Process Regression (GPR)",
+          "artifact": "throughput_t_h__gpr.joblib",
+          "metrics": {
+            "n_samples": 21,
+            "mae": 1.6365,
+            "rmse": 2.4544,
+            "r2": 0.5311,
+            "max_abs_error": 7.7381
+          },
+          "fitted_kernel": "0.433**2 * DotProduct(sigma_0=0.01) + 0.673**2 * RBF(length_scale=0.546) + WhiteKernel(noise_level=0.0395)"
+        }
+      }
+    },
+    "net_specific_energy_kWh_t": {
+      "label": "Net Specific Energy",
+      "unit": "kWh/t",
+      "category": "energy",
+      "description": "Net specific comminution energy (Pt - Pi) / W. Preferred over total specific energy to isolate net grinding work from idle power.",
+      "n_samples": 21,
+      "test_ids": [
+        "T1A01",
+        "T1A02",
+        "T1A03",
+        "T1A04",
+        "T1A05",
+        "T1A06",
+        "T1A07",
+        "T1A08",
+        "T1A09",
+        "T1A10",
+        "T1A11",
+        "T1B01",
+        "T2A01",
+        "T2A02",
+        "T2A03",
+        "T2A04",
+        "T2B01",
+        "T2B02",
+        "T2B03",
+        "T2B04",
+        "T2B05"
+      ],
+      "feature_bounds": {
+        "actual_specific_pressure": {
+          "min": 2.08,
+          "max": 4.92,
+          "mean": 3.854761904761905,
+          "median": 3.95,
+          "std": 0.5096235772373472,
+          "q10": 3.9,
+          "q90": 3.96
+        },
+        "roll_speed_set_m_s": {
+          "min": 0.61,
+          "max": 0.9,
+          "mean": 0.7538095238095239,
+          "median": 0.75,
+          "std": 0.04737891835787206,
+          "q10": 0.73,
+          "q90": 0.77
+        },
+        "feed_moisture_pct": {
+          "min": 1.0,
+          "max": 5.8,
+          "mean": 2.6714285714285713,
+          "median": 2.5,
+          "std": 0.9721845797701469,
+          "q10": 2.4,
+          "q90": 2.5
+        },
+        "feed_F80_mm": {
+          "min": 1.86,
+          "max": 21.77,
+          "mean": 16.76904761904762,
+          "median": 21.33,
+          "std": 7.20956025341484,
+          "q10": 6.16,
+          "q90": 21.54
+        }
+      },
+      "target_min": 0.85,
+      "target_max": 1.96,
+      "target_mean": 1.4476,
+      "models": {
+        "linear_regression": {
+          "label": "Linear Regression",
+          "artifact": "net_specific_energy_kWh_t__linear_regression.joblib",
+          "metrics": {
+            "n_samples": 21,
+            "mae": 0.0739,
+            "rmse": 0.1089,
+            "r2": 0.8313,
+            "max_abs_error": 0.347
+          },
+          "standardized_coefficients": {
+            "actual_specific_pressure": 0.1861,
+            "roll_speed_set_m_s": -0.0036,
+            "feed_moisture_pct": 0.1605,
+            "feed_F80_mm": 0.1235
+          },
+          "intercept": 1.4476
+        },
+        "random_forest": {
+          "label": "Random Forest",
+          "artifact": "net_specific_energy_kWh_t__random_forest.joblib",
+          "metrics": {
+            "n_samples": 21,
+            "mae": 0.1535,
+            "rmse": 0.2407,
+            "r2": 0.1765,
+            "max_abs_error": 0.6845
+          },
+          "feature_importances": {
+            "actual_specific_pressure": 0.3522,
+            "roll_speed_set_m_s": 0.0545,
+            "feed_moisture_pct": 0.3583,
+            "feed_F80_mm": 0.235
+          }
+        },
+        "gpr": {
+          "label": "Gaussian Process Regression (GPR)",
+          "artifact": "net_specific_energy_kWh_t__gpr.joblib",
+          "metrics": {
+            "n_samples": 21,
+            "mae": 0.06,
+            "rmse": 0.1022,
+            "r2": 0.8515,
+            "max_abs_error": 0.3211
+          },
+          "fitted_kernel": "0.454**2 * DotProduct(sigma_0=0.01) + 0.441**2 * RBF(length_scale=1.69) + WhiteKernel(noise_level=0.014)"
+        }
+      }
+    },
+    "scaleup_P80_mm": {
+      "label": "Scale-up Product P80",
+      "unit": "mm",
+      "category": "product_size",
+      "description": "Scale-up composite product 80% passing size (reported in 16 of 21 tests).",
+      "n_samples": 16,
+      "test_ids": [
+        "T1A01",
+        "T1A02",
+        "T1A03",
+        "T1A04",
+        "T1A05",
+        "T1A06",
+        "T1A07",
+        "T1A08",
+        "T1A09",
+        "T1A10",
+        "T1A11",
+        "T1B01",
+        "T2B02",
+        "T2B03",
+        "T2B04",
+        "T2B05"
+      ],
+      "feature_bounds": {
+        "actual_specific_pressure": {
+          "min": 2.08,
+          "max": 4.92,
+          "mean": 3.8243750000000003,
+          "median": 3.94,
+          "std": 0.5849212910013335,
+          "q10": 3.44,
+          "q90": 3.965
+        },
+        "roll_speed_set_m_s": {
+          "min": 0.61,
+          "max": 0.9,
+          "mean": 0.753125,
+          "median": 0.75,
+          "std": 0.05437140792732887,
+          "q10": 0.73,
+          "q90": 0.77
+        },
+        "feed_moisture_pct": {
+          "min": 1.0,
+          "max": 5.8,
+          "mean": 2.73125,
+          "median": 2.5,
+          "std": 1.1151793577716547,
+          "q10": 2.3,
+          "q90": 3.75
+        },
+        "feed_F80_mm": {
+          "min": 1.86,
+          "max": 21.77,
+          "mean": 16.118125,
+          "median": 21.33,
+          "std": 7.600770328284714,
+          "q10": 5.925000000000001,
+          "q90": 21.33
+        }
+      },
+      "target_min": 1.12,
+      "target_max": 9.48,
+      "target_mean": 5.9925,
+      "models": {
+        "linear_regression": {
+          "label": "Linear Regression",
+          "artifact": "scaleup_P80_mm__linear_regression.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 0.5482,
+            "rmse": 0.6427,
+            "r2": 0.925,
+            "max_abs_error": 1.216
+          },
+          "standardized_coefficients": {
+            "actual_specific_pressure": -0.5056,
+            "roll_speed_set_m_s": -0.0633,
+            "feed_moisture_pct": 0.0786,
+            "feed_F80_mm": 2.193
+          },
+          "intercept": 5.9925
+        },
+        "random_forest": {
+          "label": "Random Forest",
+          "artifact": "scaleup_P80_mm__random_forest.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 0.7827,
+            "rmse": 1.0182,
+            "r2": 0.8119,
+            "max_abs_error": 2.6016
+          },
+          "feature_importances": {
+            "actual_specific_pressure": 0.0447,
+            "roll_speed_set_m_s": 0.0247,
+            "feed_moisture_pct": 0.0286,
+            "feed_F80_mm": 0.902
+          }
+        },
+        "gpr": {
+          "label": "Gaussian Process Regression (GPR)",
+          "artifact": "scaleup_P80_mm__gpr.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 0.5751,
+            "rmse": 0.6728,
+            "r2": 0.9179,
+            "max_abs_error": 1.257
+          },
+          "fitted_kernel": "0.484**2 * DotProduct(sigma_0=0.01) + 0.205**2 * RBF(length_scale=0.1) + WhiteKernel(noise_level=0.0001)"
+        }
+      }
+    },
+    "centre_P80_mm": {
+      "label": "Centre Product P80",
+      "unit": "mm",
+      "category": "product_size",
+      "description": "Centre product stream 80% passing size (kept separate from edge P80).",
+      "n_samples": 16,
+      "test_ids": [
+        "T1A01",
+        "T1A02",
+        "T1A03",
+        "T1A04",
+        "T1A05",
+        "T1A06",
+        "T1A07",
+        "T1A08",
+        "T1A09",
+        "T1A10",
+        "T1A11",
+        "T1B01",
+        "T2B02",
+        "T2B03",
+        "T2B04",
+        "T2B05"
+      ],
+      "feature_bounds": {
+        "actual_specific_pressure": {
+          "min": 2.08,
+          "max": 4.92,
+          "mean": 3.8243750000000003,
+          "median": 3.94,
+          "std": 0.5849212910013335,
+          "q10": 3.44,
+          "q90": 3.965
+        },
+        "roll_speed_set_m_s": {
+          "min": 0.61,
+          "max": 0.9,
+          "mean": 0.753125,
+          "median": 0.75,
+          "std": 0.05437140792732887,
+          "q10": 0.73,
+          "q90": 0.77
+        },
+        "feed_moisture_pct": {
+          "min": 1.0,
+          "max": 5.8,
+          "mean": 2.73125,
+          "median": 2.5,
+          "std": 1.1151793577716547,
+          "q10": 2.3,
+          "q90": 3.75
+        },
+        "feed_F80_mm": {
+          "min": 1.86,
+          "max": 21.77,
+          "mean": 16.118125,
+          "median": 21.33,
+          "std": 7.600770328284714,
+          "q10": 5.925000000000001,
+          "q90": 21.33
+        }
+      },
+      "target_min": 1.09,
+      "target_max": 8.88,
+      "target_mean": 5.5512,
+      "models": {
+        "linear_regression": {
+          "label": "Linear Regression",
+          "artifact": "centre_P80_mm__linear_regression.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 0.6067,
+            "rmse": 0.7407,
+            "r2": 0.887,
+            "max_abs_error": 1.5787
+          },
+          "standardized_coefficients": {
+            "actual_specific_pressure": -0.4556,
+            "roll_speed_set_m_s": -0.1254,
+            "feed_moisture_pct": 0.1599,
+            "feed_F80_mm": 2.0646
+          },
+          "intercept": 5.5512
+        },
+        "random_forest": {
+          "label": "Random Forest",
+          "artifact": "centre_P80_mm__random_forest.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 0.7073,
+            "rmse": 0.9586,
+            "r2": 0.8107,
+            "max_abs_error": 2.3639
+          },
+          "feature_importances": {
+            "actual_specific_pressure": 0.0531,
+            "roll_speed_set_m_s": 0.0217,
+            "feed_moisture_pct": 0.0287,
+            "feed_F80_mm": 0.8966
+          }
+        },
+        "gpr": {
+          "label": "Gaussian Process Regression (GPR)",
+          "artifact": "centre_P80_mm__gpr.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 0.6518,
+            "rmse": 0.7781,
+            "r2": 0.8753,
+            "max_abs_error": 1.5883
+          },
+          "fitted_kernel": "0.483**2 * DotProduct(sigma_0=0.01) + 0.239**2 * RBF(length_scale=0.1) + WhiteKernel(noise_level=0.0001)"
+        }
+      }
+    },
+    "edge_P80_mm": {
+      "label": "Edge Product P80",
+      "unit": "mm",
+      "category": "product_size",
+      "description": "Edge product stream 80% passing size (kept separate from centre P80).",
+      "n_samples": 16,
+      "test_ids": [
+        "T1A01",
+        "T1A02",
+        "T1A03",
+        "T1A04",
+        "T1A05",
+        "T1A06",
+        "T1A07",
+        "T1A08",
+        "T1A09",
+        "T1A10",
+        "T1A11",
+        "T1B01",
+        "T2B02",
+        "T2B03",
+        "T2B04",
+        "T2B05"
+      ],
+      "feature_bounds": {
+        "actual_specific_pressure": {
+          "min": 2.08,
+          "max": 4.92,
+          "mean": 3.8243750000000003,
+          "median": 3.94,
+          "std": 0.5849212910013335,
+          "q10": 3.44,
+          "q90": 3.965
+        },
+        "roll_speed_set_m_s": {
+          "min": 0.61,
+          "max": 0.9,
+          "mean": 0.753125,
+          "median": 0.75,
+          "std": 0.05437140792732887,
+          "q10": 0.73,
+          "q90": 0.77
+        },
+        "feed_moisture_pct": {
+          "min": 1.0,
+          "max": 5.8,
+          "mean": 2.73125,
+          "median": 2.5,
+          "std": 1.1151793577716547,
+          "q10": 2.3,
+          "q90": 3.75
+        },
+        "feed_F80_mm": {
+          "min": 1.86,
+          "max": 21.77,
+          "mean": 16.118125,
+          "median": 21.33,
+          "std": 7.600770328284714,
+          "q10": 5.925000000000001,
+          "q90": 21.33
+        }
+      },
+      "target_min": 1.28,
+      "target_max": 12.87,
+      "target_mean": 8.4787,
+      "models": {
+        "linear_regression": {
+          "label": "Linear Regression",
+          "artifact": "edge_P80_mm__linear_regression.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 0.7227,
+            "rmse": 0.9468,
+            "r2": 0.9193,
+            "max_abs_error": 2.4813
+          },
+          "standardized_coefficients": {
+            "actual_specific_pressure": -0.7917,
+            "roll_speed_set_m_s": 0.2952,
+            "feed_moisture_pct": -0.376,
+            "feed_F80_mm": 2.9402
+          },
+          "intercept": 8.4787
+        },
+        "random_forest": {
+          "label": "Random Forest",
+          "artifact": "edge_P80_mm__random_forest.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 1.3837,
+            "rmse": 1.6967,
+            "r2": 0.7407,
+            "max_abs_error": 4.2609
+          },
+          "feature_importances": {
+            "actual_specific_pressure": 0.061,
+            "roll_speed_set_m_s": 0.0366,
+            "feed_moisture_pct": 0.0363,
+            "feed_F80_mm": 0.8661
+          }
+        },
+        "gpr": {
+          "label": "Gaussian Process Regression (GPR)",
+          "artifact": "edge_P80_mm__gpr.joblib",
+          "metrics": {
+            "n_samples": 16,
+            "mae": 0.7102,
+            "rmse": 0.9421,
+            "r2": 0.9201,
+            "max_abs_error": 2.4293
+          },
+          "fitted_kernel": "0.478**2 * DotProduct(sigma_0=0.01) + 0.213**2 * RBF(length_scale=0.143) + WhiteKernel(noise_level=0.0001)"
+        }
+      }
+    }
+  },
+  "unavailable_targets": [
+    {
+      "name": "bond_work_index_reduction",
+      "label": "Bond Work Index / Micro-Cracking Benefit",
+      "unit": "kWh/t",
+      "reason": "Before/after HPGR Bond Ball Mill Work Index measurements are not included in HPGR_Extracted_Data.xlsx. Must not be fabricated."
+    }
+  ]
+}

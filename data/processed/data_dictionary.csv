@@ -1,0 +1,40 @@
+column,unit,role,dtype,non_null,missing,missing_pct,unique_count,min,max,mean,std,notes
+Test_ID,-,Identifier,object,21,0,0.0,21,,,,,Unique pilot test ID (preserved).
+Phase,-,Metadata,object,21,0,0.0,2,,,,,Experimental campaign phase (Phase One / Phase Two).
+roll_speed_rpm,rpm,Input (Collinear),float64,21,0,0.0,3,15.3,22.9,19.1,1.2017,Collinear with roll_speed_set_m_s (r=0.968).
+static_gap_mm,mm,Constant,int64,21,0,0.0,1,9.0,9.0,9.0,0.0,Constant 9.0 mm across all 21 tests; excluded from ML.
+hydraulic_pressure_set_bar,bar,Input (Collinear),float64,21,0,0.0,14,42.5,100.7,78.8571,10.4263,Setpoint hydraulic pressure.
+pressing_force_set_kN,kN,Input (Collinear),int64,21,0,0.0,13,342.0,810.0,634.1429,83.856,Collinear with actual_specific_pressure (r=1.000).
+test_time_s,s,Metadata,float64,21,0,0.0,18,15.0,24.2,19.7719,1.9954,Duration of pilot test run.
+roll_speed_set_m_s,m/s,Selected Feature,float64,21,0,0.0,7,0.61,0.9,0.7538,0.0474,Primary roll peripheral speed feature.
+actual_roll_gap_mm,mm,Post-Process Response,float64,21,0,0.0,20,17.26,25.39,22.1738,1.8735,Floating operating gap; response variable.
+actual_specific_pressure,N/mm²,Selected Feature,float64,21,0,0.0,10,2.08,4.92,3.8548,0.5096,Primary specific pressing force feature.
+idle_power_kW,kW,Energy Component,float64,21,0,0.0,21,6.88,12.2,8.9124,1.172,No-load roll drive power.
+power_draw_kW,kW,Energy Component,float64,21,0,0.0,21,43.58,79.75,61.8414,9.7837,Gross power draw during test.
+total_specific_energy_kWh_t,kWh/t,Alternative Energy,float64,21,0,0.0,17,1.09,2.32,1.6924,0.283,Gross specific energy; kept separate from net.
+net_specific_energy_kWh_t,kWh/t,Primary Target,float64,21,0,0.0,16,0.85,1.96,1.4476,0.2718,Preferred net specific energy target (Pt - Pi)/W.
+throughput_t_h,t/h,Primary Target,float64,21,0,0.0,21,29.17,46.17,36.7743,3.6729,Press mass throughput rate.
+specific_throughput_constant,t·s/(m³·h),Physics Diagnostic,float64,21,0,0.0,21,231.68,319.8,296.8462,23.2007,m-dot = W / (D × L × v).
+flake_thickness_mm,mm,Post-Process Response,float64,16,5,23.8,14,18.0,27.5,23.7563,2.4603,Measured discharge flake thickness (16/21).
+feed_moisture_pct,%,Selected Feature,float64,21,0,0.0,6,1.0,5.8,2.6714,0.9722,Feed moisture content (%).
+feed_bulk_density_t_m3,t/m³,Partial Input,float64,15,6,28.6,2,2.16,2.25,2.184,0.0412,6 missing rows and only 2 unique values.
+feed_F80_mm,mm,Selected Feature,float64,21,0,0.0,11,1.86,21.77,16.769,7.2096,Feed 80% passing size.
+feed_F50_mm,mm,Input (Collinear),float64,21,0,0.0,10,0.49,13.96,10.119,5.4698,Collinear with feed_F80_mm (r=0.992).
+centre_P80_mm,mm,Primary Target,float64,16,5,23.8,16,1.09,8.88,5.5513,2.2756,Centre product P80 (16/21 valid rows).
+centre_P50_mm,mm,Secondary Product,float64,16,5,23.8,15,0.22,2.29,1.3194,0.6093,Centre product P50 (16/21 valid rows).
+edge_P80_mm,mm,Primary Target,float64,16,5,23.8,16,1.28,12.87,8.4787,3.4414,Edge product P80 (16/21 valid rows).
+edge_P50_mm,mm,Secondary Product,float64,16,5,23.8,16,0.25,5.3,2.7862,1.4628,Edge product P50 (16/21 valid rows).
+scaleup_P80_mm,mm,Primary Target,float64,16,5,23.8,16,1.12,9.48,5.9925,2.4245,Scale-up product P80 (16/21 valid rows).
+scaleup_P50_mm,mm,Secondary Product,float64,16,5,23.8,14,0.22,2.74,1.5369,0.7163,Scale-up product P50 (16/21 valid rows).
+feed_mass_kg,kg,Mass Balance,int64,21,0,0.0,16,249.0,393.0,351.7619,31.5942,Feed sample mass.
+centre_product_mass_kg,kg,Mass Balance,float64,21,0,0.0,21,101.3,234.6,161.1571,34.1529,Centre product recovered mass.
+centre_product_pct,%,Mass Balance,float64,16,5,23.8,16,58.9,82.4,73.0,5.8704,Centre share of centre+edge product.
+edge_product_mass_kg,kg,Mass Balance,float64,16,5,23.8,15,37.0,101.9,54.925,15.5117,Edge product recovered mass.
+edge_product_pct,%,Mass Balance,float64,16,5,23.8,16,17.6,41.1,27.0,5.8704,Edge share of centre+edge product.
+waste_product_mass_kg,kg,Mass Balance,float64,21,0,0.0,20,89.0,179.6,137.2619,24.1052,Waste/bypass material mass.
+waste_pct_of_feed,%,Mass Balance,float64,21,0,0.0,20,30.4,46.8,38.8333,4.5527,Waste percentage of feed.
+recovered_product_mass_kg,kg,Mass Balance,int64,21,0,0.0,18,243.0,378.0,343.9048,30.1113,Total recovered product mass.
+mass_reconciliation_pct,%,Mass Balance,float64,21,0,0.0,17,0.1,3.9,2.2286,1.1363,Mass balance discrepancy (%).
+flake_density_t_m3,t/m³,Sparse Measurement,float64,6,15,71.4,4,2.3,2.56,2.5,0.1028,15 missing rows (only 6 valid); excluded from ML.
+Test_Description,-,Metadata,object,21,0,0.0,18,,,,,Description merged from Test_Key.
+data_source,-,Provenance,object,21,0,0.0,1,,,,,REAL for pilot tests; SYNTHETIC for exploration.
