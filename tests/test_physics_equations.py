@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-import math
-
 import pytest
 
-from src.data_loader import load_operating_data
+from src.data_loader import load_operating_data, load_physics_config
+from src.physics.feature_engineering import generate_synthetic_exploration_data
 from src.physics.hpgr_equations import (
     audit_physics_consistency,
+    compute_blended_product_psd,
+    compute_force_balance_gap_mm,
+    compute_micro_cracking_bwi,
     compute_net_specific_energy,
     compute_peripheral_speed,
     compute_pressing_force_from_fsp,
@@ -72,3 +74,30 @@ def test_physics_audit_matches_workbook_closely() -> None:
     assert audit["diff_net_Esp"].abs().max() < 0.01
     assert audit["diff_tot_Esp"].abs().max() < 0.01
     assert audit["diff_Fsp"].abs().max() < 0.02
+
+
+def test_micro_cracking_bwi_and_gap_and_blended_psd() -> None:
+    bwi = compute_micro_cracking_bwi(15.0, net_specific_energy_kwh_t=1.5, reduction_pct_per_kwh_t=6.0)
+    assert bwi["reduction_pct"] == pytest.approx(9.0, abs=1e-4)
+    assert bwi["product_bwi_kwh_t"] == pytest.approx(13.65, abs=1e-2)
+
+    gap_hi = compute_force_balance_gap_mm(5.0, moisture_pct=2.5)
+    gap_lo = compute_force_balance_gap_mm(2.0, moisture_pct=2.5)
+    assert gap_hi < gap_lo
+
+    psd_df, blended_p80 = compute_blended_product_psd(6.5, 10.5, centre_weight=0.85, edge_weight=0.15)
+    assert 6.5 < blended_p80 < 10.5
+    assert {"size_mm", "centre_passing_pct", "edge_passing_pct", "blended_passing_pct"}.issubset(psd_df.columns)
+
+
+def test_synthetic_2000_row_profiles(tmp_path) -> None:
+    cfg = load_physics_config()
+    out_csv = tmp_path / "syn.csv"
+    df_ubc = generate_synthetic_exploration_data(cfg, n_samples=2000, profile="ubc_mesaba_pilot", output_path=out_csv)
+    assert len(df_ubc) == 2000
+    assert (df_ubc["data_source"] == "SYNTHETIC").all()
+
+    df_pdf = generate_synthetic_exploration_data(cfg, n_samples=2000, profile="pdf_iron_ore_ranges", output_path=out_csv)
+    assert len(df_pdf) == 2000
+    assert df_pdf["specific_throughput_constant"].between(345.0, 419.0).all()
+    assert df_pdf["blended_85_15_P80_mm"].between(0.15, 0.80).all()

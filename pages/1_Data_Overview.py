@@ -17,6 +17,7 @@ _STRETCH_KW = {"width": "stretch"} if tuple(int(x) for x in st.__version__.split
 st.set_page_config(page_title="Data Overview | HPGR", page_icon="📊", layout="wide")
 
 from src.data_loader import WorkbookLoadError, load_operating_data, load_workbook_sheets
+from src.physics.feature_engineering import generate_synthetic_exploration_data
 from src.preprocessing import get_suitable_numeric_columns
 from src.visualization.cache import (
     cached_missing_bar,
@@ -194,13 +195,52 @@ else:
         '<div style="background:rgba(245,158,11,0.18);border:2px solid #FBBF24;border-radius:12px;padding:14px;">'
         '<div style="font-weight:800;color:#FDE68A;font-size:1.05rem;">🟠 SYNTHETIC Exploration Data (data/synthetic/)</div>'
         '<p style="font-size:0.9rem;color:#E2E8F0;margin-top:6px;">'
-        'Contains 40 physically bounded synthetic records (<code>data_source = "SYNTHETIC"</code>) generated '
-        "solely for software verification and visual exploration. <b>Never</b> used for model evaluation or claimed as plant validation.</p></div></div>"
+        'Contains 2,000 physics-seeded synthetic records (<code>data_source = "SYNTHETIC"</code>) generated '
+        "for software testing & exploration (PDF §5.3). <b>Never</b> used for real model validation.</p></div></div>"
     )
     st.markdown(policy_html, unsafe_allow_html=True)
-    syn_df = cached_synthetic_df()
+
+    profiles = config.get("synthetic_policy", {}).get("profiles", {})
+    prof_keys = list(profiles.keys()) if profiles else ["ubc_mesaba_pilot", "pdf_iron_ore_ranges"]
+    g_c1, g_c2, g_c3 = st.columns([1.5, 0.8, 0.8])
+    with g_c1:
+        sel_prof = st.selectbox(
+            "Synthetic Range Profile",
+            options=prof_keys,
+            format_func=lambda k: profiles.get(k, {}).get("label", k),
+            key="syn_prof_select",
+        )
+    with g_c2:
+        sel_n = st.number_input(
+            "Synthetic Rows",
+            min_value=40,
+            max_value=5000,
+            value=2000,
+            step=100,
+            key="syn_n_input",
+        )
+    with g_c3:
+        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+        gen_clicked = st.button("🧪 Generate Synthetic Data", type="primary", **_STRETCH_KW, key="gen_syn_btn")
+
+    if gen_clicked:
+        st.session_state["syn_df_live"] = generate_synthetic_exploration_data(
+            config, n_samples=int(sel_n), profile=sel_prof
+        )
+
+    syn_df = st.session_state.get("syn_df_live")
+    if syn_df is None:
+        syn_df = cached_synthetic_df()
+
     if syn_df is not None:
-        st.markdown(f"#### Synthetic Exploration Table (`data_source == 'SYNTHETIC'`, {len(syn_df)} rows)")
-        st.dataframe(syn_df, **_STRETCH_KW, height=300)
+        st.markdown(f"#### Synthetic Exploration Table (`data_source == 'SYNTHETIC'`, {len(syn_df):,} rows)")
+        st.dataframe(syn_df.head(200), **_STRETCH_KW, height=300)
+        st.download_button(
+            f"Download Full Synthetic Dataset ({len(syn_df):,} rows CSV)",
+            data=syn_df.to_csv(index=False).encode("utf-8"),
+            file_name="hpgr_synthetic_exploration.csv",
+            mime="text/csv",
+            key="syn_download_csv",
+        )
     else:
-        st.info("Synthetic exploration CSV has not been generated yet. Run `python -m src.models.train_models`.")
+        st.info("Click **🧪 Generate Synthetic Data** above to build the 2,000-row synthetic exploration table.")

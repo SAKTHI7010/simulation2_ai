@@ -96,10 +96,29 @@ modeling:
     - key: "gpr"
       label: "Gaussian Process Regression (GPR)"
 
+micro_cracking_literature:
+  default_feed_bwi_kwh_t: 15.0
+  linear_reduction_pct_per_kwh_t: 6.0
+  max_reduction_pct: 25.0
+  note: "Literature-calibrated linear micro-cracking model (PDF Project 2 Ex. 5); NOT measured in HPGR_Extracted_Data.xlsx."
+
+synthetic_gap_and_psd:
+  reference_gap_mm: 22.5
+  reference_fsp_n_mm2: 3.95
+  stiffness_slope_mm_per_fsp: -1.45
+  moisture_slope_mm_per_pct: -0.95
+  min_gap_mm: 12.0
+  max_gap_mm: 30.0
+  centre_weight: 0.85
+  edge_weight: 0.15
+  rosin_rammler_m_centre: 0.95
+  rosin_rammler_m_edge: 1.15
+
 synthetic_policy:
   enabled_for_exploration: true
-  n_samples: 40
+  n_samples: 2000
   seed: 42
+  default_profile: "ubc_mesaba_pilot"
   output_file: "data/synthetic/hpgr_synthetic_exploration.csv"
   purpose: "Software testing and visual exploration only; never used for model training or real-plant validation."
   bounds:
@@ -109,3 +128,24 @@ synthetic_policy:
     feed_F80_mm: [2.0, 22.0]
     assumed_specific_throughput_constant: 298.0
     assumed_idle_power_kw: 8.9
+  profiles:
+    ubc_mesaba_pilot:
+      label: "UBC Mesaba Pilot Ranges (m-dot ~230-320, P80 ~1.1-9.5 mm)"
+      actual_specific_pressure: [2.0, 5.0]
+      roll_speed_set_m_s: [0.60, 0.90]
+      feed_moisture_pct: [1.0, 5.8]
+      feed_F80_mm: [2.0, 22.0]
+      m_dot_range: [230.0, 325.0]
+      base_mdot: 298.0
+      p80_range: [1.0, 12.0]
+      esp_range: [0.75, 2.25]
+    pdf_iron_ore_ranges:
+      label: "PDF §5.3 Literature Ranges (m-dot 345-419, P80 0.15-0.80 mm, Esp 0.9-2.2 kWh/t)"
+      actual_specific_pressure: [2.0, 5.5]
+      roll_speed_set_m_s: [0.60, 1.50]
+      feed_moisture_pct: [1.0, 6.0]
+      feed_F80_mm: [5.0, 25.0]
+      m_dot_range: [345.0, 419.0]
+      base_mdot: 382.0
+      p80_range: [0.15, 0.80]
+      esp_range: [0.90, 2.20]

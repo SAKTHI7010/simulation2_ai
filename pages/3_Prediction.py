@@ -18,14 +18,20 @@ st.set_page_config(page_title="Prediction | HPGR", page_icon="🎯", layout="wid
 from src.data_loader import WorkbookLoadError
 from src.models import predict as _pm
 from src.models.uncertainty import find_nearest_real_tests
-from src.physics.hpgr_equations import compute_pressing_force_from_fsp, compute_rpm_from_speed
+from src.physics.hpgr_equations import (
+    compute_blended_product_psd,
+    compute_force_balance_gap_mm,
+    compute_micro_cracking_bwi,
+    compute_pressing_force_from_fsp,
+    compute_rpm_from_speed,
+)
 from src.visualization.cache import (
     cached_metadata_and_reports,
     cached_physics_config,
     cached_real_operating_data,
     cached_trained_artifacts,
 )
-from src.visualization.charts import plot_prediction_model_compare
+from src.visualization.charts import plot_prediction_model_compare, plot_product_psd_blend
 from src.visualization.ui_theme import (
     PALETTE,
     apply_custom_theme,
@@ -244,14 +250,27 @@ with right_col:
                 )
 
         diag = res["physics_diagnostics"]
+        gap_cfg = config.get("synthetic_gap_and_psd", {})
+        syn_gap_mm = compute_force_balance_gap_mm(
+            snap_inputs["actual_specific_pressure"],
+            snap_inputs["feed_moisture_pct"],
+            reference_gap_mm=float(gap_cfg.get("reference_gap_mm", 22.5)),
+            reference_fsp_n_mm2=float(gap_cfg.get("reference_fsp_n_mm2", 3.95)),
+            stiffness_slope_mm_per_fsp=float(gap_cfg.get("stiffness_slope_mm_per_fsp", -1.45)),
+            moisture_slope_mm_per_pct=float(gap_cfg.get("moisture_slope_mm_per_pct", -0.95)),
+            min_gap_mm=float(gap_cfg.get("min_gap_mm", 12.0)),
+            max_gap_mm=float(gap_cfg.get("max_gap_mm", 30.0)),
+        )
         st.markdown("#### 🧮 Physics Diagnostics at Predicted Point")
-        d1, d2, d3 = st.columns(3)
+        d1, d2, d3, d4 = st.columns(4)
         with d1:
             render_kpi_card("Specific Throughput Constant (ṁ)", f"{diag['implied_m_dot']:.1f}", "t·s/(m³·h)", "W / (D × L × v)", PALETTE["sky"])
         with d2:
             render_kpi_card("Estimated Net Grinding Power", f"{diag['estimated_net_power_kW']:.1f}", "kW", "Net Esp × Throughput", PALETTE["amber"])
         with d3:
             render_kpi_card("Scale-up Reduction Ratio", f"{diag['implied_reduction_ratio']:.2f}", "×", "Feed F80 / Scale-up P80", PALETTE["slate"])
+        with d4:
+            render_kpi_card("Synthetic Force-Balance Gap", f"{syn_gap_mm:.2f}", "mm", "PDF §5.3 approximation (not measured)", PALETTE["coral"])
 
 if "pred_result" in st.session_state:
     res = st.session_state["pred_result"]
@@ -273,5 +292,87 @@ if "pred_result" in st.session_state:
         st.markdown("#### Top 3 Closest Real Pilot Tests (Range-Normalized Euclidean Distance)")
         nearest_df = find_nearest_real_tests(snap_inputs, cached_real_operating_data(), features, global_bounds, top_k=3)
         st.dataframe(nearest_df, **_STRETCH_KW, height=280)
+
+    st.markdown("---")
+    st.markdown("### 🌊 Blended Centre / Edge Product PSD & Literature BWi Micro-Cracking (PDF §5.3)")
+    col_psd, col_bwi = st.columns([1.25, 1.0])
+
+    with col_psd:
+        gap_cfg = config.get("synthetic_gap_and_psd", {})
+        c_pct = st.slider(
+            "Centre vs. Edge Weighting (% Centre, PDF default 85:15)",
+            min_value=50,
+            max_value=95,
+            value=int(round(float(gap_cfg.get("centre_weight", 0.85)) * 100)),
+            step=5,
+            key="pred_centre_weight_pct",
+        )
+        w_c = c_pct / 100.0
+        w_e = 1.0 - w_c
+        c_p80 = max(float(preds["centre_P80_mm"]["prediction"]), 0.05)
+        e_p80 = max(float(preds["edge_P80_mm"]["prediction"]), 0.05)
+        psd_df, blended_p80 = compute_blended_product_psd(
+            c_p80,
+            e_p80,
+            centre_weight=w_c,
+            edge_weight=w_e,
+            m_centre=float(gap_cfg.get("rosin_rammler_m_centre", 0.95)),
+            m_edge=float(gap_cfg.get("rosin_rammler_m_edge", 1.15)),
+        )
+        render_kpi_card(
+            f"Synthetic {c_pct}:{100-c_pct} Blended P80",
+            f"{blended_p80:.2f}",
+            "mm",
+            f"Centre P80={c_p80:.2f} mm ({c_pct}%) + Edge P80={e_p80:.2f} mm ({100-c_pct}%)",
+            PALETTE["sky"],
+        )
+        st.plotly_chart(plot_product_psd_blend(psd_df, centre_weight=w_c, edge_weight=w_e), **_STRETCH_KW)
+
+    with col_bwi:
+        bwi_cfg = config.get("micro_cracking_literature", {})
+        st.info(
+            "**Literature-Calibrated Micro-Cracking Simulator (PDF §5.3 Ex. 5):** "
+            "Estimates downstream Bond Ball Mill Work Index reduction from predicted HPGR net specific energy. "
+            "*Synthetic/literature formula — not measured in `HPGR_Extracted_Data.xlsx`.*"
+        )
+        feed_bwi = st.number_input(
+            "Feed Bond Work Index (kWh/t)",
+            min_value=5.0,
+            max_value=35.0,
+            value=float(bwi_cfg.get("default_feed_bwi_kwh_t", 15.0)),
+            step=0.5,
+            key="pred_feed_bwi",
+        )
+        bwi_slope = st.slider(
+            "Linear Micro-Cracking Slope (% BWi reduction per kWh/t)",
+            min_value=1.0,
+            max_value=12.0,
+            value=float(bwi_cfg.get("linear_reduction_pct_per_kwh_t", 6.0)),
+            step=0.5,
+            key="pred_bwi_slope",
+        )
+        bwi_out = compute_micro_cracking_bwi(
+            feed_bwi,
+            preds["net_specific_energy_kWh_t"]["prediction"],
+            reduction_pct_per_kwh_t=bwi_slope,
+            max_reduction_pct=float(bwi_cfg.get("max_reduction_pct", 25.0)),
+        )
+        b1, b2 = st.columns(2)
+        with b1:
+            render_kpi_card(
+                "Simulated Product BWi",
+                f"{bwi_out['product_bwi_kwh_t']:.2f}",
+                "kWh/t",
+                f"From feed {bwi_out['feed_bwi_kwh_t']:.2f} kWh/t",
+                PALETTE["violet"],
+            )
+        with b2:
+            render_kpi_card(
+                "Estimated BWi Reduction",
+                f"-{bwi_out['bwi_delta_kwh_t']:.2f}",
+                "kWh/t",
+                f"{bwi_out['reduction_pct']:.1f}% micro-cracking benefit",
+                PALETTE["emerald"],
+            )
 
 render_bwi_unavailable_card()

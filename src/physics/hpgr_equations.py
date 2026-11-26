@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Union
+from typing import Dict, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -175,3 +175,98 @@ def audit_physics_consistency(
             }
         )
     return pd.DataFrame(rows)
+
+
+def compute_micro_cracking_bwi(
+    feed_bwi_kwh_t: float,
+    net_specific_energy_kwh_t: float,
+    reduction_pct_per_kwh_t: float = 6.0,
+    max_reduction_pct: float = 25.0,
+) -> Dict[str, float]:
+    """Literature-calibrated linear micro-cracking BWi reduction model (PDF §5.3 Ex. 5).
+
+    Not measured in HPGR_Extracted_Data.xlsx; clearly labeled as synthetic/literature estimate.
+    """
+    bwi_in = _validate_positive("feed_bwi_kwh_t", feed_bwi_kwh_t)
+    esp = max(0.0, float(net_specific_energy_kwh_t))
+    slope = max(0.0, float(reduction_pct_per_kwh_t))
+    cap = max(0.0, min(50.0, float(max_reduction_pct)))
+    reduction_pct = min(cap, slope * esp)
+    product_bwi = bwi_in * (1.0 - reduction_pct / 100.0)
+    return {
+        "feed_bwi_kwh_t": round(bwi_in, 2),
+        "product_bwi_kwh_t": round(product_bwi, 2),
+        "bwi_delta_kwh_t": round(bwi_in - product_bwi, 2),
+        "reduction_pct": round(reduction_pct, 2),
+    }
+
+
+def compute_force_balance_gap_mm(
+    fsp_n_mm2: float,
+    moisture_pct: float = 2.5,
+    reference_gap_mm: float = 22.5,
+    reference_fsp_n_mm2: float = 3.95,
+    stiffness_slope_mm_per_fsp: float = -1.45,
+    moisture_slope_mm_per_pct: float = -0.95,
+    min_gap_mm: float = 12.0,
+    max_gap_mm: float = 30.0,
+) -> float:
+    """Synthetic force-balance floating roll gap approximation (PDF §5.3 Ex. 1)."""
+    fsp = max(0.0, float(fsp_n_mm2))
+    moist = max(0.0, float(moisture_pct))
+    gap = (
+        float(reference_gap_mm)
+        + float(stiffness_slope_mm_per_fsp) * (fsp - float(reference_fsp_n_mm2))
+        + float(moisture_slope_mm_per_pct) * (moist - 2.5)
+    )
+    return float(max(float(min_gap_mm), min(float(max_gap_mm), gap)))
+
+
+def compute_blended_product_psd(
+    centre_p80_mm: float,
+    edge_p80_mm: float,
+    centre_weight: float = 0.85,
+    edge_weight: float = 0.15,
+    m_centre: float = 0.95,
+    m_edge: float = 1.15,
+    sieve_sizes_mm: Sequence[float] | None = None,
+) -> Tuple[pd.DataFrame, float]:
+    """Generate Rosin-Rammler centre/edge PSD curves and weighted blend (default 85:15)."""
+    c_p80 = _validate_positive("centre_p80_mm", centre_p80_mm)
+    e_p80 = _validate_positive("edge_p80_mm", edge_p80_mm)
+    w_c = float(centre_weight)
+    w_e = float(edge_weight)
+    if w_c < 0.0 or w_e < 0.0 or (w_c + w_e) <= 0.0:
+        raise ValueError("centre_weight and edge_weight must be non-negative with positive sum.")
+    total_w = w_c + w_e
+    w_c /= total_w
+    w_e /= total_w
+
+    sizes = (
+        np.asarray(sieve_sizes_mm, dtype=float)
+        if sieve_sizes_mm is not None
+        else np.array([0.045, 0.075, 0.106, 0.15, 0.212, 0.30, 0.425, 0.60, 0.85, 1.18, 1.70, 2.36, 3.35, 4.75, 6.70, 9.50, 13.2, 19.0])
+    )
+    sizes = np.sort(sizes)
+    k_80 = -math.log(0.20)  # ~1.6094379
+
+    pass_c = 100.0 * (1.0 - np.exp(-k_80 * (sizes / c_p80) ** float(m_centre)))
+    pass_e = 100.0 * (1.0 - np.exp(-k_80 * (sizes / e_p80) ** float(m_edge)))
+    pass_blend = w_c * pass_c + w_e * pass_e
+
+    psd_df = pd.DataFrame(
+        {
+            "size_mm": sizes,
+            "centre_passing_pct": np.round(pass_c, 2),
+            "edge_passing_pct": np.round(pass_e, 2),
+            "blended_passing_pct": np.round(pass_blend, 2),
+        }
+    )
+
+    # Interpolate blended P80 on log-size grid
+    dense_sizes = np.geomspace(max(sizes.min(), 1e-3), max(sizes.max(), e_p80 * 2.5), 400)
+    dense_c = 100.0 * (1.0 - np.exp(-k_80 * (dense_sizes / c_p80) ** float(m_centre)))
+    dense_e = 100.0 * (1.0 - np.exp(-k_80 * (dense_sizes / e_p80) ** float(m_edge)))
+    dense_blend = w_c * dense_c + w_e * dense_e
+    blended_p80 = float(np.interp(80.0, dense_blend, dense_sizes))
+    return psd_df, round(blended_p80, 3)

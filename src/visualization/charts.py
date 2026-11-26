@@ -509,3 +509,49 @@ def plot_gpr_uncertainty_profile(
         yaxis_title=f"Predictive Std Dev σ ({unit})",
     )
     return _apply_clean_layout(fig, height=360)
+
+
+def plot_product_psd_blend(
+    psd_df: pd.DataFrame,
+    centre_weight: float = 0.85,
+    edge_weight: float = 0.15,
+) -> go.Figure:
+    """Plot log-size cumulative passing curves for Centre, Edge, and weighted Blended PSD."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=psd_df["size_mm"],
+            y=psd_df["centre_passing_pct"],
+            mode="lines+markers",
+            name="Centre Product (Rosin-Rammler)",
+            line=dict(color="#34D399", width=2.5),
+            marker=dict(size=6),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=psd_df["size_mm"],
+            y=psd_df["edge_passing_pct"],
+            mode="lines+markers",
+            name="Edge Product (Rosin-Rammler)",
+            line=dict(color="#FB7185", width=2.5),
+            marker=dict(size=6),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=psd_df["size_mm"],
+            y=psd_df["blended_passing_pct"],
+            mode="lines+markers",
+            name=f"Blended ({centre_weight*100:.0f}:{edge_weight*100:.0f} Centre:Edge)",
+            line=dict(color="#38BDF8", width=3.5, dash="solid"),
+            marker=dict(size=7),
+        )
+    )
+    fig.add_hline(y=80.0, line_dash="dash", line_color="#FBBF24", annotation_text="80% Passing (P80)")
+    fig.update_xaxes(type="log", title="Particle Size (mm, log scale)")
+    fig.update_yaxes(range=[0, 105], title="Cumulative % Passing")
+    fig.update_layout(
+        title=f"Synthetic Blended Product PSD ({centre_weight*100:.0f}:{edge_weight*100:.0f} Centre:Edge)",
+    )
+    return _apply_clean_layout(fig, height=370)
